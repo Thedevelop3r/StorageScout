@@ -39,18 +39,14 @@ safely.
 
 ## Screenshots
 
-The screenshots show demo mode (`pcscanner --demo`), which uses made-up drives, folders, files
-and programs. No real computer was scanned.
+The new PC Scanner design. All drives, folders, files and programs shown are made up; no real
+computer was scanned.
 
-| Overview | Treemap |
+| Dashboard | Scanning |
 | --- | --- |
-| ![Overview](screenshots/overview.png) | ![Treemap](screenshots/treemap.png) |
-| **Explorer** | **Groups** |
-| ![Explorer](screenshots/explorer.png) | ![Groups](screenshots/groups.png) |
-| **Largest files** | **Duplicates** |
-| ![Largest files](screenshots/largestfiles.png) | ![Duplicates](screenshots/duplicates.png) |
-| **Cleanup** | **Programs** |
-| ![Cleanup](screenshots/cleanup.png) | ![Programs](screenshots/programs.png) |
+| ![Dashboard](screenshots/dashboard.png) | ![Scanning](screenshots/scanning.png) |
+| **Sunburst explorer** | **Update available** |
+| ![Sunburst explorer](screenshots/sunburst.png) | ![Update available](screenshots/update.png) |
 
 ## Download
 
@@ -85,7 +81,7 @@ pcscanner.exe "D:\\" "C:\Users\me\Videos" --view=treemap
 - `--view=<name>` opens a view at start: `overview`, `explorer`, `treemap`, `search`, `groups`,
   `filetypes`, `programs`, `largestfiles`, `largestfolders`, `oldfiles`, `duplicates`,
   `emptyfolders`, `cleanup`, `selection` or `inaccessible`.
-- `--demo` loads a fictional computer instead of scanning yours (used for the screenshots).
+- `--demo` loads a fictional computer instead of scanning yours.
   Opening, deleting and scanning are disabled in demo mode.
 
 Run as administrator to include folders that need elevated rights (they are otherwise listed
