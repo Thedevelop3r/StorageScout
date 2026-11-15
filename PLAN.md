@@ -157,9 +157,71 @@ view with wildcards, a *Selection* view, *Empty folders*, and command-line argum
 
 ### Ideas for later
 * Measure allocated size on disk (compression, sparse files, hard links counted once).
-* Save and compare scans over time ("what grew since last week").
 * Read NTFS MFT directly for even faster scans (needs administrator rights).
-* Scheduled scans and low-space alerts.
+
+## 7. Version 2 (branch `v2`)
+
+Approved by the owner on 2026-11-15. Design: dark navy theme, one selectable accent colour,
+Inter / Space Grotesk fonts, line icons, ring charts and gauges, grouped sidebar that collapses
+to icons, light theme kept. Screens: dashboard, scanning, sunburst explorer, update prompt
+(see `screenshots/`).
+
+### 7.1 Self-update (via GitHub Releases)
+1. A release is built, signed and published when `main` gets a new version.
+2. The app checks the latest release at start-up, at most once a day (can be turned off).
+3. Prompt: what's new, *Install and restart* / *Remind me later* / *Skip this version*.
+4. The installer must match `SHA256SUMS.txt` and be signed with thumbprint
+   `A7AAB0826FF0EE4B5CC7BC4B78722CE255D0BC2E`, otherwise nothing is installed.
+5. Silent install, restart into the new version; settings and history are kept.
+6. PRIVACY.md: the only network use is the update check, which sends no personal data.
+
+### 7.2 Features
+| # | Feature | Phase |
+|---|---------|-------|
+| F1 | New theme, fonts, icons, sidebar, dashboard, scanning screen | 1 |
+| F2 | Self-update (7.1) | 2 |
+| F3 | Scan history and "what grew" | 3 |
+| F4 | Sunburst explorer with details panel | 3 |
+| F5 | Quarantine (restore for 30 days) | 4 |
+| F6 | Media viewer: photos, videos (with sound), PDF documents inside the app | 4 |
+| F7 | Faster rescans (only changed folders) | 5 |
+| F8 | Similar photos (perceptual hash) | 5 |
+| F9 | Startup apps | 5 |
+| F10 | Leftover finder (uninstalled programs) | 5 |
+| F11 | Scheduled scans and low-space alerts | 5 |
+| F12 | Command palette (Ctrl+K) | 5 |
+| F13 | Exclusions | 5 |
+| F14 | HTML report export | 5 |
+| F15 | Large file alerts | 5 |
+| F16 | Stale downloads | 5 |
+| F17 | Developer caches (Docker, WSL, Android SDK, Visual Studio, JetBrains) | 6 |
+| F18 | Game library view (Steam, Epic, GOG, Xbox) | 6 |
+| F19 | Hidden space (shadow copies, restore points, hiberfil, pagefile, WinSxS) | 6 |
+| F20 | Empty and tiny-file clutter | 5 |
+| F21 | Media details (video length/resolution/codec, photo date/camera) | 6 |
+| F22 | Unused language packs and duplicate fonts | 6 |
+| F23 | Cleanup preview (dry run) | 4 |
+| F24 | Undo history | 4 |
+| F25 | Protected paths | 4 |
+| F26 | Secure delete (off by default, SSD warning) | 6 |
+| F27 | NTFS compression for rarely used folders | 6 |
+| F28 | Move a folder to another drive and leave a link | 6 |
+| F29 | Archive old files | 6 |
+| F30 | Drive health (SMART, temperature, SSD wear) | 7 |
+| F31 | Space forecast | 3 |
+| F32 | Program last-used dates | 6 |
+| F33 | Bulk uninstall with leftover cleanup | 6 |
+| F34 | Browser profiles | 6 |
+| F35 | Windows optional features | 7 |
+| F36 | Cloud folders that could be online-only | 7 |
+| F37 | Saved searches and filters | 5 |
+| F38 | Tags and notes | 5 |
+| F39 | Compare two folders | 6 |
+| F40 | Drag and drop a folder to scan | 5 |
+| F41 | "Scan with PC Scanner" in the Explorer right-click menu (optional at install) | 7 |
+| F42 | System tray mode | 7 |
+| F43 | Keyboard shortcuts and cheat sheet (`?`) | 5 |
+| F44 | Translatable interface (English, Urdu) | 7 |
 
 ## 6. Workflow
 * Work happens on the `dev` branch; commits are pushed regularly to `origin/dev`.
