@@ -7,8 +7,9 @@ created with OpenSSL ([`scripts/create-signing-cert.sh`](scripts/create-signing-
 |---|---|
 | Subject | `CN=Bilal Amjad, O=Bilal Amjad (PC Scanner)` |
 | Public certificate | [`signing/pcscanner-codesign.cer`](signing/pcscanner-codesign.cer) |
-| SHA-1 thumbprint | _added when the certificate is created_ |
-| SHA-256 fingerprint | _added when the certificate is created_ |
+| SHA-1 thumbprint | `A7AAB0826FF0EE4B5CC7BC4B78722CE255D0BC2E` |
+| SHA-256 fingerprint | `A0C0D5CCF96128F8412C62988A29799617DDFB02D9CAA063BE1EE7472E3F5541` |
+| Valid | 15 Nov 2026 to 14 Nov 2031 |
 
 ## What is signed
 

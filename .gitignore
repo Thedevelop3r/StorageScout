@@ -1,10 +1,19 @@
 /target
 /dist
 /staging
-# Code signing secrets must never be committed
+
+# Code signing secrets must never be committed. Keep them offline, outside the repository.
+# Only the public certificate (signing/*.cer) belongs in git.
+pcscanner-signing/
 *.pfx
+*.pfx.*
 *.p12
 *.key
 *.pem
-*.pfx.base64
+*.csr
+*.srl
+*.base64
 password.txt
+*password*.txt
+.env
+.env.*
