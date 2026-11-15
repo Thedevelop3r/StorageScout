@@ -1,4 +1,4 @@
-# PC Scanner — Project Plan
+# StorageScout — Project Plan
 
 A native desktop application, written purely in **Rust** with **egui/eframe**, that scans the
 whole computer (every drive, every file, installed and portable programs) and presents the
@@ -48,7 +48,7 @@ Everything else (size formatting, categorisation, treemap layout, analysis) is h
 ```
 src/
 ├── main.rs              entry point, window setup
-├── app.rs               PcScannerApp: global state, tab routing, scan lifecycle
+├── app.rs               StorageScoutApp: global state, tab routing, scan lifecycle
 ├── model/
 │   ├── mod.rs
 │   ├── tree.rs          FileTree arena (flat Vec<Node>, contiguous children)
@@ -153,7 +153,7 @@ src/
 
 Added along the way: a separate *Build Output* category (`.pdb`, `.rlib`, `.o` …), a *Search*
 view with wildcards, a *Selection* view, *Empty folders*, and command-line arguments
-(`pcscanner <paths…> --view=<name>`).
+(`storagescout <paths…> --view=<name>`).
 
 ### Ideas for later
 * Measure allocated size on disk (compression, sparse files, hard links counted once).
@@ -179,7 +179,7 @@ to icons, light theme kept. Screens: dashboard, scanning, sunburst explorer, upd
 
 Implemented in `src/update.rs` (GitHub API, download, SHA-256, Authenticode check pinned to the
 thumbprint), `src/ui/update.rs` (dialog and state), `src/ui/settings.rs` (Settings page) and
-`installer/pcscanner.iss` (`/RELAUNCH=1` starts the new version after a silent install).
+`installer/storagescout.iss` (`/RELAUNCH=1` starts the new version after a silent install).
 
 ### 7.2 Features
 | # | Feature | Phase |
@@ -224,7 +224,7 @@ thumbprint), `src/ui/update.rs` (dialog and state), `src/ui/settings.rs` (Settin
 | F38 | Tags and notes | 5 |
 | F39 | Compare two folders | 6 |
 | F40 | Drag and drop a folder to scan | 5 |
-| F41 | "Scan with PC Scanner" in the Explorer right-click menu (optional at install) | 7 |
+| F41 | "Scan with StorageScout" in the Explorer right-click menu (optional at install) | 7 |
 | F42 | System tray mode | 7 |
 | F43 | Keyboard shortcuts and cheat sheet (`?`) | 5 |
 | F44 | Translatable interface (English, Urdu) | 7 |

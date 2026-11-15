@@ -1,7 +1,7 @@
-# Signs files with the PC Scanner code signing certificate (Authenticode, SHA-256, timestamped).
+# Signs files with the StorageScout code signing certificate (Authenticode, SHA-256, timestamped).
 #
 # Usage:  scripts/sign.ps1 <file> [<file> ...]
-# Needs:  $env:SIGNING_PFX_PATH        path to pcscanner-codesign.pfx
+# Needs:  $env:SIGNING_PFX_PATH        path to storagescout-codesign.pfx
 #         $env:SIGNING_CERT_PASSWORD   its password
 # Also used by Inno Setup (SignTool) to sign the installer and the uninstaller.
 
@@ -36,7 +36,7 @@ foreach ($file in $Files) {
     $signed = $false
     foreach ($ts in $timestampServers) {
         & $signtool sign /fd SHA256 /f $pfx /p $password /tr $ts /td SHA256 `
-            /d "PC Scanner" /du "https://github.com/Thedevelop3r/pcscanner" $file
+            /d "StorageScout" /du "https://github.com/Thedevelop3r/StorageScout" $file
         if ($LASTEXITCODE -eq 0) { $signed = $true; break }
         Write-Warning "Signing with timestamp server $ts failed; trying the next one."
         Start-Sleep -Seconds 3

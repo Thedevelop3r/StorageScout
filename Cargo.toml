@@ -1,12 +1,12 @@
 [package]
-name = "pcscanner"
+name = "storagescout"
 version = "1.0.0"
 edition = "2024"
 authors = ["Bilal Amjad"]
 description = "Scan every drive, file and program on your PC, see what uses space, and clean up safely."
 license = "MIT"
-repository = "https://github.com/Thedevelop3r/pcscanner"
-homepage = "https://github.com/Thedevelop3r/pcscanner"
+repository = "https://github.com/Thedevelop3r/StorageScout"
+homepage = "https://github.com/Thedevelop3r/StorageScout"
 readme = "README.md"
 keywords = ["disk-usage", "disk-analyzer", "cleanup", "egui", "windows"]
 categories = ["filesystem", "gui"]

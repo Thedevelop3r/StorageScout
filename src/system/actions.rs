@@ -266,7 +266,7 @@ mod tests {
 
     #[test]
     fn permanent_delete_and_empty_folder() {
-        let dir = std::env::temp_dir().join(format!("pcscanner_del_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("storagescout_del_{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("keep/inner")).unwrap();
         std::fs::write(dir.join("keep/a.txt"), b"a").unwrap();
@@ -288,10 +288,10 @@ mod tests {
     #[test]
     #[ignore]
     fn recycle_bin_batch_deletes_all() {
-        let dir = std::env::temp_dir().join(format!("pcscanner_trash_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("storagescout_trash_{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
-        let a = dir.join("pcscanner_test_a.mp4");
-        let b = dir.join("pcscanner_test_b.mp4");
+        let a = dir.join("storagescout_test_a.mp4");
+        let b = dir.join("storagescout_test_b.mp4");
         std::fs::write(&a, b"a").unwrap();
         std::fs::write(&b, b"b").unwrap();
         let ra = delete_one(&a, DeleteMode::RecycleBin);

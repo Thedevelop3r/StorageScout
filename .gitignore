@@ -4,7 +4,7 @@
 
 # Code signing secrets must never be committed. Keep them offline, outside the repository.
 # Only the public certificate (signing/*.cer) belongs in git.
-pcscanner-signing/
+storagescout-signing/
 *.pfx
 *.pfx.*
 *.p12

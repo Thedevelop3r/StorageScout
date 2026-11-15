@@ -13,7 +13,7 @@ mod util;
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("PC Scanner")
+            .with_title("StorageScout")
             .with_inner_size([1360.0, 860.0])
             .with_min_inner_size([900.0, 560.0])
             .with_icon(egui::IconData {
@@ -43,10 +43,10 @@ fn main() -> eframe::Result {
         }
     }
     eframe::run_native(
-        "PC Scanner",
+        "StorageScout",
         options,
         Box::new(move |cc| {
-            Ok(Box::new(app::PcScannerApp::new(
+            Ok(Box::new(app::StorageScoutApp::new(
                 cc,
                 paths,
                 view.as_deref(),

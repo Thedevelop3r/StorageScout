@@ -127,7 +127,7 @@ mod tests {
 
     #[test]
     fn scans_a_directory() {
-        let dir = std::env::temp_dir().join(format!("pcscanner_test_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("storagescout_test_{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(dir.join("inner/deeper")).unwrap();
         fs::write(dir.join("a.txt"), vec![0u8; 100]).unwrap();

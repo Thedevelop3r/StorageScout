@@ -1,32 +1,32 @@
 #!/usr/bin/env bash
-# Creates the self-signed code signing certificate used to sign PC Scanner releases.
+# Creates the self-signed code signing certificate used to sign StorageScout releases.
 #
 # Usage:   scripts/create-signing-cert.sh [output-dir]
 # Needs:   OpenSSL 3 (included with Git for Windows; run it from Git Bash).
 #
-# Output (default: ~/pcscanner-signing, OUTSIDE the repository):
-#   pcscanner-codesign.pfx         private key + certificate. SECRET: never commit or share it.
-#   pcscanner-codesign.pfx.base64  the same file as base64, for the GitHub secret.
-#   pcscanner-codesign.cer         public certificate. Safe to publish (copied to signing/).
+# Output (default: ~/storagescout-signing, OUTSIDE the repository):
+#   storagescout-codesign.pfx         private key + certificate. SECRET: never commit or share it.
+#   storagescout-codesign.pfx.base64  the same file as base64, for the GitHub secret.
+#   storagescout-codesign.cer         public certificate. Safe to publish (copied to signing/).
 #   password.txt                   the PFX password. SECRET.
 #
 # Then add two repository secrets (Settings > Secrets and variables > Actions):
-#   SIGNING_CERT_PFX_BASE64   contents of pcscanner-codesign.pfx.base64
+#   SIGNING_CERT_PFX_BASE64   contents of storagescout-codesign.pfx.base64
 #   SIGNING_CERT_PASSWORD     contents of password.txt
 # For example with the GitHub CLI:
-#   gh secret set SIGNING_CERT_PFX_BASE64 < ~/pcscanner-signing/pcscanner-codesign.pfx.base64
-#   gh secret set SIGNING_CERT_PASSWORD   < ~/pcscanner-signing/password.txt
+#   gh secret set SIGNING_CERT_PFX_BASE64 < ~/storagescout-signing/storagescout-codesign.pfx.base64
+#   gh secret set SIGNING_CERT_PASSWORD   < ~/storagescout-signing/password.txt
 # Keep a backup of the output folder somewhere safe and offline.
 
 set -euo pipefail
 # Stop Git Bash / MSYS from turning "/CN=..." into a Windows path.
 export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*"
 
-SUBJECT="/CN=Bilal Amjad/O=Bilal Amjad (PC Scanner)"
+SUBJECT="/CN=Bilal Amjad/O=Bilal Amjad (StorageScout)"
 DAYS=1825   # 5 years
-NAME="pcscanner-codesign"
+NAME="storagescout-codesign"
 
-out="${1:-$HOME/pcscanner-signing}"
+out="${1:-$HOME/storagescout-signing}"
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 
 case "$(cd "$(dirname "$out")" 2>/dev/null && pwd)/" in
@@ -55,7 +55,7 @@ openssl req -quiet -x509 -newkey rsa:4096 -sha256 -days "$DAYS" -nodes \
   -addext "subjectKeyIdentifier=hash"
 
 # PFX for signtool (AES-256, readable by Windows 10/11).
-openssl pkcs12 -export -name "PC Scanner code signing" \
+openssl pkcs12 -export -name "StorageScout code signing" \
   -inkey "$NAME.key.pem" -in "$NAME.crt.pem" -out "$NAME.pfx" \
   -passout file:password.txt \
   -keypbe AES-256-CBC -certpbe AES-256-CBC -macalg SHA256

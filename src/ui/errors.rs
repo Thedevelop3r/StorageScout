@@ -15,7 +15,7 @@ pub fn show(ui: &mut Ui, st: &mut ErrorsState, data: &ScanData, actions: &mut Ve
     ui.heading("Inaccessible locations");
     ui.label(RichText::new(
         "These folders could not be read (usually “Access is denied”). Their size is not included. \
-         Run PC Scanner as administrator to include them.",
+         Run StorageScout as administrator to include them.",
     ).weak());
     ui.horizontal(|ui| {
         ui.label("🔍");

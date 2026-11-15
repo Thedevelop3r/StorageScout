@@ -1,15 +1,15 @@
 //! Embeds the icon and version information into the Windows executable.
 
 fn main() {
-    println!("cargo:rerun-if-changed=assets/pcscanner.ico");
+    println!("cargo:rerun-if-changed=assets/storagescout.ico");
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
         let version = env!("CARGO_PKG_VERSION");
         let mut res = winresource::WindowsResource::new();
-        res.set_icon("assets/pcscanner.ico")
-            .set("ProductName", "PC Scanner")
-            .set("FileDescription", "PC Scanner")
-            .set("InternalName", "pcscanner")
-            .set("OriginalFilename", "pcscanner.exe")
+        res.set_icon("assets/storagescout.ico")
+            .set("ProductName", "StorageScout")
+            .set("FileDescription", "StorageScout")
+            .set("InternalName", "storagescout")
+            .set("OriginalFilename", "storagescout.exe")
             .set("CompanyName", "Bilal Amjad")
             .set(
                 "LegalCopyright",

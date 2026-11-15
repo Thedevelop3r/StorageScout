@@ -155,7 +155,7 @@ struct ConfirmDelete {
     contents_only: bool,
 }
 
-pub struct PcScannerApp {
+pub struct StorageScoutApp {
     view: View,
     drives: Vec<DriveInfo>,
     drive_checked: Vec<bool>,
@@ -193,7 +193,7 @@ pub struct PcScannerApp {
     errors: ui::errors::ErrorsState,
 }
 
-impl PcScannerApp {
+impl StorageScoutApp {
     pub fn new(
         cc: &eframe::CreationContext<'_>,
         start_paths: Vec<PathBuf>,
@@ -391,7 +391,7 @@ impl PcScannerApp {
 
     fn start_scan(&mut self, ctx: &egui::Context) {
         if self.demo {
-            self.notify("Scanning is disabled in demo mode. Start PC Scanner without --demo to scan this PC.");
+            self.notify("Scanning is disabled in demo mode. Start StorageScout without --demo to scan this PC.");
             return;
         }
         let mut roots: Vec<PathBuf> = Vec::new();
@@ -749,7 +749,7 @@ impl PcScannerApp {
                             p.success,
                             p.success_bg,
                         )
-                        .on_hover_text("A new version of PC Scanner is available");
+                        .on_hover_text("A new version of StorageScout is available");
                         if resp.clicked() {
                             self.updater.dialog_open = true;
                         }
@@ -891,7 +891,8 @@ impl PcScannerApp {
             .add_enabled(has_data, egui::Button::new("Scan summary (JSON)…"))
             .clicked()
         {
-            if let (Some(d), Some(p)) = (&self.data, save_dialog("pcscanner_summary.json", "json"))
+            if let (Some(d), Some(p)) =
+                (&self.data, save_dialog("storagescout_summary.json", "json"))
             {
                 result = Some(
                     export::export_summary_json(d, &p)
@@ -930,7 +931,7 @@ impl PcScannerApp {
                 ui.vertical(|ui| {
                     ui.spacing_mut().item_spacing.y = 0.0;
                     ui.label(
-                        RichText::new("PC Scanner")
+                        RichText::new("StorageScout")
                             .font(theme::heading(18.0))
                             .color(p.text),
                     );
@@ -1336,7 +1337,7 @@ fn save_dialog(name: &str, ext: &str) -> Option<PathBuf> {
         .save_file()
 }
 
-impl eframe::App for PcScannerApp {
+impl eframe::App for StorageScoutApp {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         self.poll_background();
         let events = self.updater.poll(&mut self.settings);

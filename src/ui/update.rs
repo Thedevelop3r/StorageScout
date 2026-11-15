@@ -36,7 +36,7 @@ enum Msg {
 pub enum Event {
     Notify(String),
     SaveSettings,
-    /// The installer is running: close PC Scanner so it can be replaced.
+    /// The installer is running: close StorageScout so it can be replaced.
     Quit,
 }
 
@@ -73,12 +73,15 @@ impl Updater {
 
     /// Fictional update shown in demo mode (nothing is downloaded).
     pub fn demo_offer(&mut self, open: bool) {
+        // The next minor version after this one.
+        let v = update::parse_version(update::CURRENT).unwrap_or([1, 0, 0]);
+        let next = format!("{}.{}.0", v[0], v[1] + 1);
         let prefix = format!(
-            "https://github.com/{}/releases/download/v0.3.0/",
+            "https://github.com/{}/releases/download/v{next}/",
             update::REPO
         );
         self.release = Some(Release {
-            version: "0.3.0".into(),
+            version: next.clone(),
             notes: "## What's new\n\
                     * Sunburst explorer and scan history: see what grew since your last scan.\n\
                     * Similar photo finder groups near-identical pictures, not only exact copies.\n\
@@ -88,8 +91,8 @@ impl Updater {
             page: format!("https://github.com/{}/releases", update::REPO),
             published: Some(chrono::Utc::now() - chrono::Duration::days(2)),
             installer: update::Asset {
-                name: "PCScanner-Setup-0.3.0-x64.exe".into(),
-                url: format!("{prefix}PCScanner-Setup-0.3.0-x64.exe"),
+                name: format!("StorageScout-Setup-{next}-x64.exe"),
+                url: format!("{prefix}StorageScout-Setup-{next}-x64.exe"),
                 size: 6_920_000,
             },
             sums: update::Asset {
@@ -191,7 +194,7 @@ impl Updater {
                         self.phase = Phase::UpToDate;
                         if self.manual {
                             events.push(Event::Notify(format!(
-                                "PC Scanner {} is the latest version.",
+                                "StorageScout {} is the latest version.",
                                 update::CURRENT
                             )));
                         }
@@ -290,7 +293,7 @@ impl Updater {
                         ui.horizontal(|ui| {
                             theme::title(
                                 ui,
-                                &format!("PC Scanner {} is ready", release.version),
+                                &format!("StorageScout {} is ready", release.version),
                                 24.0,
                             );
                             ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
@@ -399,7 +402,7 @@ impl Updater {
                         Mark::Done => "matches",
                         Mark::Failed => "does not match",
                     });
-                    check_row(ui, marks[2], "Signed by Bilal Amjad (PC Scanner)", &short);
+                    check_row(ui, marks[2], "Signed by Bilal Amjad (StorageScout)", &short);
                     check_row(ui, Mark::Done, "Your settings and scan history are kept", "");
                     match &self.phase {
                         Phase::Downloading(pr) => {
@@ -438,7 +441,7 @@ impl Updater {
                             ui.add_space(8.0);
                             ui.label(
                                 RichText::new(format!(
-                                    "Verified: signed by {}, SHA-256 {}…. Installing; PC Scanner will restart.",
+                                    "Verified: signed by {}, SHA-256 {}…. Installing; StorageScout will restart.",
                                     v.signer,
                                     &v.sha256[..12]
                                 ))
@@ -450,7 +453,7 @@ impl Updater {
                 });
                 ui.add_space(14.0);
 
-                if theme::checkbox(ui, &mut settings.check_updates, "Check for updates when PC Scanner starts")
+                if theme::checkbox(ui, &mut settings.check_updates, "Check for updates when StorageScout starts")
                     .changed()
                 {
                     settings.update_choice_made = true;
@@ -527,7 +530,7 @@ impl Updater {
         events
     }
 
-    /// First-start question: may PC Scanner check GitHub for updates?
+    /// First-start question: may StorageScout check GitHub for updates?
     pub fn consent_dialog(&mut self, ui: &mut Ui, settings: &mut Settings) -> Vec<Event> {
         let mut events = Vec::new();
         if !self.ask_consent || self.dialog_open {
@@ -557,12 +560,12 @@ impl Updater {
                         p.accent_text,
                     );
                     ui.add_space(4.0);
-                    theme::title(ui, "Keep PC Scanner up to date?", 20.0);
+                    theme::title(ui, "Keep StorageScout up to date?", 20.0);
                 });
                 ui.add_space(12.0);
                 ui.label(
                     RichText::new(
-                        "PC Scanner can check GitHub for a new version when it starts, at most \
+                        "StorageScout can check GitHub for a new version when it starts, at most \
                          once a day. Only the release list is downloaded: nothing about you or \
                          this computer is sent. You always decide whether to install an update.",
                     )

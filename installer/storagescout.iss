@@ -1,14 +1,14 @@
-; Inno Setup 6 script for PC Scanner.
+; Inno Setup 6 script for StorageScout.
 ;
 ; Build (from the repository root, after `cargo build --release`):
-;   iscc /DAppVersion=0.1.0 installer\pcscanner.iss
+;   iscc /DAppVersion=0.1.0 installer\storagescout.iss
 ;
-; Silent update (used by PC Scanner's updater):
-;   PCScanner-Setup-x.y.z-x64.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /FORCECLOSEAPPLICATIONS /RELAUNCH=1
+; Silent update (used by StorageScout's updater):
+;   StorageScout-Setup-x.y.z-x64.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /FORCECLOSEAPPLICATIONS /RELAUNCH=1
 ;
 ; Optional defines:
 ;   /DAppVersion=x.y.z     version shown in the installer (default 0.0.0)
-;   /DSourceExe=path       application exe to package (default target\release\pcscanner.exe)
+;   /DSourceExe=path       application exe to package (default target\release\storagescout.exe)
 ;   /DOutputDir=path       where the installer is written (default dist)
 ;   /DSign                 sign installer and uninstaller; also pass a sign tool named
 ;                          "pcsign", e.g. /Spcsign="powershell -File scripts\sign.ps1 $f"
@@ -17,20 +17,20 @@
   #define AppVersion "0.0.0"
 #endif
 #ifndef SourceExe
-  #define SourceExe "..\target\release\pcscanner.exe"
+  #define SourceExe "..\target\release\storagescout.exe"
 #endif
 #ifndef OutputDir
   #define OutputDir "..\dist"
 #endif
 
-#define AppName "PC Scanner"
+#define AppName "StorageScout"
 #define AppPublisher "Bilal Amjad"
-#define AppURL "https://github.com/Thedevelop3r/pcscanner"
-#define AppExeName "pcscanner.exe"
+#define AppURL "https://github.com/Thedevelop3r/StorageScout"
+#define AppExeName "storagescout.exe"
 
 [Setup]
 ; Never change AppId: Windows uses it to recognise upgrades and the uninstaller.
-AppId={{2A3DA3C9-B524-428F-86AE-1FB1E103E09F}
+AppId={{0052F372-1524-4554-8560-B84F9169242B}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
@@ -54,11 +54,11 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
 LicenseFile=..\LICENSE
-SetupIconFile=..\assets\pcscanner.ico
+SetupIconFile=..\assets\storagescout.ico
 UninstallDisplayIcon={app}\{#AppExeName}
 UninstallDisplayName={#AppName}
 OutputDir={#OutputDir}
-OutputBaseFilename=PCScanner-Setup-{#AppVersion}-x64
+OutputBaseFilename=StorageScout-Setup-{#AppVersion}-x64
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
@@ -87,7 +87,7 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: deskto
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
-; PC Scanner updates itself by running this installer with /VERYSILENT /RELAUNCH=1;
+; StorageScout updates itself by running this installer with /VERYSILENT /RELAUNCH=1;
 ; start the new version afterwards, as the user (not elevated).
 Filename: "{app}\{#AppExeName}"; Flags: nowait runasoriginaluser; Check: RelaunchRequested
 

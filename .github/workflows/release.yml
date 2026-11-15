@@ -1,9 +1,9 @@
-# Builds PC Scanner on a GitHub-hosted Windows runner, signs the application, the installer
+# Builds StorageScout on a GitHub-hosted Windows runner, signs the application, the installer
 # and the uninstaller with the project's self-signed code signing certificate, and publishes a
-# GitHub release. Installed copies of PC Scanner find that release and offer to update.
+# GitHub release. Installed copies of StorageScout find that release and offer to update.
 #
 # Setup (Settings > Secrets and variables > Actions > Repository secrets):
-#   SIGNING_CERT_PFX_BASE64   base64 of pcscanner-codesign.pfx (see scripts/create-signing-cert.sh)
+#   SIGNING_CERT_PFX_BASE64   base64 of storagescout-codesign.pfx (see scripts/create-signing-cert.sh)
 #   SIGNING_CERT_PASSWORD     the PFX password
 # Without these secrets, builds are unsigned.
 #
@@ -100,7 +100,7 @@ jobs:
         env:
           PFX_BASE64: ${{ secrets.SIGNING_CERT_PFX_BASE64 }}
         run: |
-          $path = Join-Path $env:RUNNER_TEMP "pcscanner-codesign.pfx"
+          $path = Join-Path $env:RUNNER_TEMP "storagescout-codesign.pfx"
           [IO.File]::WriteAllBytes($path, [Convert]::FromBase64String($env:PFX_BASE64.Trim()))
           "SIGNING_PFX_PATH=$path" >> $env:GITHUB_ENV
 
@@ -109,7 +109,7 @@ jobs:
         shell: pwsh
         env:
           SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
-        run: ./scripts/sign.ps1 target/release/pcscanner.exe
+        run: ./scripts/sign.ps1 target/release/storagescout.exe
 
       - name: Install Inno Setup
         shell: pwsh
@@ -127,7 +127,7 @@ jobs:
           if (-not $iscc) { $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
           $isccArgs = @(
             "/DAppVersion=${{ steps.version.outputs.version }}",
-            "/DSourceExe=$((Resolve-Path target/release/pcscanner.exe).Path)",
+            "/DSourceExe=$((Resolve-Path target/release/storagescout.exe).Path)",
             "/DOutputDir=$(Join-Path $PWD 'staging/installer')"
           )
           if ($env:SIGN -eq 'true') {
@@ -135,7 +135,7 @@ jobs:
             $sign = (Resolve-Path scripts/sign.ps1).Path
             $isccArgs += "/DSign", "/Spcsign=powershell.exe -NoProfile -ExecutionPolicy Bypass -File $sign `$f"
           }
-          & $iscc @isccArgs installer/pcscanner.iss
+          & $iscc @isccArgs installer/storagescout.iss
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
 
       - name: Verify signatures
@@ -143,15 +143,15 @@ jobs:
         shell: pwsh
         run: |
           $expected = $null
-          if (Test-Path signing/pcscanner-codesign.cer) {
-            $expected = (New-Object Security.Cryptography.X509Certificates.X509Certificate2 (Resolve-Path signing/pcscanner-codesign.cer).Path).Thumbprint
+          if (Test-Path signing/storagescout-codesign.cer) {
+            $expected = (New-Object Security.Cryptography.X509Certificates.X509Certificate2 (Resolve-Path signing/storagescout-codesign.cer).Path).Thumbprint
           }
-          foreach ($f in @("target/release/pcscanner.exe", "staging/installer/PCScanner-Setup-${{ steps.version.outputs.version }}-x64.exe")) {
+          foreach ($f in @("target/release/storagescout.exe", "staging/installer/StorageScout-Setup-${{ steps.version.outputs.version }}-x64.exe")) {
             $sig = Get-AuthenticodeSignature $f
             if (-not $sig.SignerCertificate) { throw "$f is not signed" }
             if (-not $sig.TimeStamperCertificate) { throw "$f has no timestamp" }
             if ($expected -and $sig.SignerCertificate.Thumbprint -ne $expected) {
-              throw "$f was signed with $($sig.SignerCertificate.Thumbprint), expected $expected (signing/pcscanner-codesign.cer)"
+              throw "$f was signed with $($sig.SignerCertificate.Thumbprint), expected $expected (signing/storagescout-codesign.cer)"
             }
             Write-Host "$f signed by $($sig.SignerCertificate.Subject) [$($sig.SignerCertificate.Thumbprint)]"
           }
@@ -166,15 +166,15 @@ jobs:
         run: |
           $v = "${{ steps.version.outputs.version }}"
           New-Item -ItemType Directory -Force release, portable | Out-Null
-          Copy-Item "staging/installer/PCScanner-Setup-$v-x64.exe" release/
-          Copy-Item target/release/pcscanner.exe portable/
+          Copy-Item "staging/installer/StorageScout-Setup-$v-x64.exe" release/
+          Copy-Item target/release/storagescout.exe portable/
           Copy-Item LICENSE portable/LICENSE.txt
           Copy-Item README.md, PRIVACY.md, SIGNING.md portable/
-          if (Test-Path signing/pcscanner-codesign.cer) {
-            Copy-Item signing/pcscanner-codesign.cer portable/
-            Copy-Item signing/pcscanner-codesign.cer release/
+          if (Test-Path signing/storagescout-codesign.cer) {
+            Copy-Item signing/storagescout-codesign.cer portable/
+            Copy-Item signing/storagescout-codesign.cer release/
           }
-          Compress-Archive -Path portable/* -DestinationPath "release/PCScanner-$v-x64-portable.zip"
+          Compress-Archive -Path portable/* -DestinationPath "release/StorageScout-$v-x64-portable.zip"
           Get-ChildItem release -File | ForEach-Object {
             "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
           } | Set-Content -Encoding ascii release/SHA256SUMS.txt
@@ -183,7 +183,7 @@ jobs:
       - name: Upload release files
         uses: actions/upload-artifact@v7
         with:
-          name: pcscanner-${{ steps.version.outputs.version }}-windows-x64
+          name: storagescout-${{ steps.version.outputs.version }}-windows-x64
           path: release/*
           if-no-files-found: error
 
@@ -198,7 +198,7 @@ jobs:
       - name: Download release files
         uses: actions/download-artifact@v8
         with:
-          name: pcscanner-${{ needs.build.outputs.version }}-windows-x64
+          name: storagescout-${{ needs.build.outputs.version }}-windows-x64
           path: release
 
       - name: Publish release
@@ -213,14 +213,14 @@ jobs:
           else
             note="**Unsigned build.** Windows SmartScreen may warn when you run it."
           fi
-          # Installed copies of PC Scanner pick up the newest published release.
+          # Installed copies of StorageScout pick up the newest published release.
           gh release create "$TAG" release/* \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --latest \
-            --title "PC Scanner ${TAG#v}" \
+            --title "StorageScout ${TAG#v}" \
             --generate-notes \
             --notes "$note
 
-          Download \`PCScanner-Setup-${TAG#v}-x64.exe\` to install, or the portable zip to run without installing. Checksums are in \`SHA256SUMS.txt\`. Installed copies of PC Scanner 1.0 and later offer this update themselves.
+          Download \`StorageScout-Setup-${TAG#v}-x64.exe\` to install, or the portable zip to run without installing. Checksums are in \`SHA256SUMS.txt\`. Installed copies of StorageScout 1.0 and later offer this update themselves.
           See the [privacy policy]($repo_url/PRIVACY.md)."

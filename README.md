@@ -1,4 +1,4 @@
-# PC Scanner
+# StorageScout
 
 A fast desktop disk analyser for Windows (also builds on Linux and macOS), written purely in
 **Rust** with **egui**. It scans every drive, file and program on the computer and shows what is
@@ -29,36 +29,36 @@ safely.
   package caches (npm, Yarn, pnpm, pip, Cargo, Gradle, NuGet, Maven, Go), `node_modules`, Rust
   `target`, `__pycache__`, large logs, dump files and installers left in Downloads.
 - **Search** the whole index by name, with `*` and `?` wildcards.
-- **Actions** on every item (right-click): open, show in file manager, browse in PC Scanner,
+- **Actions** on every item (right-click): open, show in file manager, browse in StorageScout,
   show in treemap, copy path, select, empty folder, delete.
 - **Selection**: tick items in any view and delete them together.
 - **Safe deletion**: confirmation dialog, Recycle Bin by default, and protection for drive roots,
   the Windows directory, Program Files, the user profile and system-managed files.
 - **Export**: largest files and folders, programs (CSV), scan summary (JSON).
-- **Updates**: if you allow it, PC Scanner checks GitHub for a new release once a day, shows
+- **Updates**: if you allow it, StorageScout checks GitHub for a new release once a day, shows
   what's new, and installs it on request after checking the SHA-256 and the code signature.
 - **Settings**: light or dark theme, four accent colours, update preferences.
 
 ## Screenshots
 
-The new PC Scanner design. All drives, folders, files and programs shown are made up; no real
-computer was scanned.
+Taken with `--demo`: all drives, folders, files and programs shown are made up; no real computer
+was scanned.
 
-| Dashboard | Scanning |
+| Dashboard | Treemap |
 | --- | --- |
-| ![Dashboard](screenshots/dashboard.png) | ![Scanning](screenshots/scanning.png) |
-| **Sunburst explorer** | **Update available** |
-| ![Sunburst explorer](screenshots/sunburst.png) | ![Update available](screenshots/update.png) |
+| ![Dashboard](screenshots/dashboard.png) | ![Treemap](screenshots/treemap.png) |
+| **Cleanup** | **Update available** |
+| ![Cleanup](screenshots/cleanup.png) | ![Update available](screenshots/update.png) |
 
 ## Download
 
 Get the latest installer or portable zip from the
-[Releases page](https://github.com/Thedevelop3r/pcscanner/releases).
+[Releases page](https://github.com/Thedevelop3r/StorageScout/releases).
 
-- `PCScanner-Setup-<version>-x64.exe` installs PC Scanner for you or for all users, with a Start
+- `StorageScout-Setup-<version>-x64.exe` installs StorageScout for you or for all users, with a Start
   menu entry and an uninstaller (Settings → Apps).
-- `PCScanner-<version>-x64-portable.zip` runs without installing.
-- `SHA256SUMS.txt` lists checksums of the files, and `pcscanner-codesign.cer` is the public
+- `StorageScout-<version>-x64-portable.zip` runs without installing.
+- `SHA256SUMS.txt` lists checksums of the files, and `storagescout-codesign.cer` is the public
   signing certificate.
 
 Requires 64-bit Windows 10 or 11.
@@ -76,7 +76,7 @@ Use the release build: scanning is many times faster than in a debug build.
 Command-line options:
 
 ```bash
-pcscanner.exe "D:\\" "C:\Users\me\Videos" --view=treemap
+storagescout.exe "D:\\" "C:\Users\me\Videos" --view=treemap
 ```
 
 - Folders or drives given as arguments are scanned right away. A drive root ticks that drive.
@@ -101,26 +101,26 @@ under **Inaccessible**).
 Releases are signed with the project's own self-signed certificate, so Windows SmartScreen will
 still warn when you start the installer: choose **More info → Run anyway**. The signature lets you
 verify that the file comes from this project; see [SIGNING.md](SIGNING.md) for the certificate
-thumbprint and how to check it. You can also build PC Scanner yourself from source.
+thumbprint and how to check it. You can also build StorageScout yourself from source.
 
 ## Privacy
 
 This program will not transfer any information to other networked systems unless specifically
-requested by the user or the person installing or operating it. PC Scanner has no telemetry or
+requested by the user or the person installing or operating it. StorageScout has no telemetry or
 analytics. Its only network use is the update check, which it asks permission for on first start
 and which sends no personal data. See the [privacy policy](PRIVACY.md).
 
 ## Windows installer
 
 The installer is built with [Inno Setup 6](https://jrsoftware.org/isinfo.php) from
-[`installer/pcscanner.iss`](installer/pcscanner.iss):
+[`installer/storagescout.iss`](installer/storagescout.iss):
 
 ```bash
 cargo build --release
 ```
 
 ```bash
-iscc /DAppVersion=0.1.0 installer\pcscanner.iss
+iscc /DAppVersion=0.1.0 installer\storagescout.iss
 ```
 
 The installer is written to `dist\`.
@@ -131,10 +131,10 @@ The installer is written to `dist\`.
 2. The Release workflow tests, builds, signs the app, the installer and the uninstaller with the
    project certificate, and publishes release `v<version>` (it creates the tag). Pushing a tag
    `v<version>` yourself does the same.
-3. Installed copies of PC Scanner find the new release and offer to update.
+3. Installed copies of StorageScout find the new release and offer to update.
 
 A version is published only once: pushes to `main` that keep the same version build without
-publishing. Publishing fails if the signing secrets are missing, because PC Scanner refuses to
+publishing. Publishing fails if the signing secrets are missing, because StorageScout refuses to
 install an unsigned update.
 
 Signing needs the repository secrets `SIGNING_CERT_PFX_BASE64` and `SIGNING_CERT_PASSWORD`,

@@ -2648,31 +2648,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73072a9470554c8e794778acece2312661218aaabb635600957d952cf01c716e"
 
 [[package]]
-name = "pcscanner"
-version = "1.0.0"
-dependencies = [
- "chrono",
- "crossbeam-channel",
- "csv",
- "eframe",
- "egui",
- "egui_extras",
- "open",
- "rayon",
- "rfd",
- "serde",
- "serde_json",
- "sha2",
- "sysinfo",
- "trash",
- "ureq",
- "windows-sys 0.61.2",
- "winreg",
- "winresource",
- "xxhash-rust",
-]
-
-[[package]]
 name = "peniko"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3527,6 +3502,31 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "storagescout"
+version = "1.0.0"
+dependencies = [
+ "chrono",
+ "crossbeam-channel",
+ "csv",
+ "eframe",
+ "egui",
+ "egui_extras",
+ "open",
+ "rayon",
+ "rfd",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sysinfo",
+ "trash",
+ "ureq",
+ "windows-sys 0.61.2",
+ "winreg",
+ "winresource",
+ "xxhash-rust",
+]
 
 [[package]]
 name = "strict-num"

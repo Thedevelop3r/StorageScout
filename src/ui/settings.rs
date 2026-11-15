@@ -59,15 +59,15 @@ pub fn show(
 
             section(ui, "Updates", |ui| {
                 ui.label(
-                    RichText::new(format!("You have PC Scanner {}.", update::CURRENT))
+                    RichText::new(format!("You have StorageScout {}.", update::CURRENT))
                         .color(p.text),
                 );
                 ui.add_space(4.0);
                 if updater.store {
                     ui.label(
                         RichText::new(
-                            "Installed from the Microsoft Store, which keeps PC Scanner up to \
-                             date. PC Scanner itself makes no network requests.",
+                            "Installed from the Microsoft Store, which keeps StorageScout up to \
+                             date. StorageScout itself makes no network requests.",
                         )
                         .color(p.text_muted),
                     );
@@ -76,7 +76,7 @@ pub fn show(
                 if theme::checkbox(
                     ui,
                     &mut settings.check_updates,
-                    "Check for updates when PC Scanner starts (at most once a day)",
+                    "Check for updates when StorageScout starts (at most once a day)",
                 )
                 .changed()
                 {
@@ -158,7 +158,7 @@ pub fn show(
 
             section(ui, "About", |ui| {
                 ui.label(
-                    RichText::new(format!("PC Scanner {} by Bilal Amjad", update::CURRENT))
+                    RichText::new(format!("StorageScout {} by Bilal Amjad", update::CURRENT))
                         .color(p.text),
                 );
                 ui.label(

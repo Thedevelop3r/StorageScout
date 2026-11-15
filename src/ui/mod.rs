@@ -124,7 +124,7 @@ pub fn node_context_menu(ui: &mut Ui, ctx: &mut Ctx, id: NodeId) {
         ctx.actions.push(UiAction::Reveal(path.clone()));
         ui.close();
     }
-    if ui.button("🔭 Browse here in PC Scanner").clicked() {
+    if ui.button("🔭 Browse here in StorageScout").clicked() {
         ctx.actions.push(UiAction::ShowInExplorer(id));
         ui.close();
     }

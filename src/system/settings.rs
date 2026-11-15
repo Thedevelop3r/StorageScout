@@ -1,4 +1,4 @@
-//! Small settings file kept in `%APPDATA%\PC Scanner\settings.json`.
+//! Small settings file kept in `%APPDATA%\StorageScout\settings.json`.
 //!
 //! It only holds preferences (theme, accent colour, update choices). Scan results are never
 //! written here.
@@ -40,7 +40,11 @@ impl Default for Settings {
 
 fn path() -> Option<PathBuf> {
     let base = std::env::var_os("APPDATA")?;
-    Some(PathBuf::from(base).join("PC Scanner").join("settings.json"))
+    Some(
+        PathBuf::from(base)
+            .join("StorageScout")
+            .join("settings.json"),
+    )
 }
 
 impl Settings {

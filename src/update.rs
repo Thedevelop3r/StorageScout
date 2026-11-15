@@ -5,10 +5,10 @@
 //!    checks the SHA-256 and then the Authenticode signature: the file must not have been
 //!    changed since it was signed, and the signing certificate must be the project's own
 //!    (pinned by thumbprint below). Anything else is refused and deleted.
-//! 3. [`launch_installer`] runs the verified installer silently; it closes PC Scanner,
+//! 3. [`launch_installer`] runs the verified installer silently; it closes StorageScout,
 //!    installs the new version over the old one and starts it again.
 //!
-//! The only network requests PC Scanner makes are the ones in this file, all to GitHub.
+//! The only network requests StorageScout makes are the ones in this file, all to GitHub.
 //! They send no personal data (see PRIVACY.md).
 
 use std::io::{Read, Write};
@@ -20,15 +20,15 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
 /// GitHub repository the releases come from.
-pub const REPO: &str = "Thedevelop3r/pcscanner";
+pub const REPO: &str = "Thedevelop3r/StorageScout";
 /// SHA-1 thumbprint of the project's code signing certificate
-/// (`signing/pcscanner-codesign.cer`, see SIGNING.md).
+/// (`signing/storagescout-codesign.cer`, see SIGNING.md).
 pub const THUMBPRINT: &str = "A7AAB0826FF0EE4B5CC7BC4B78722CE255D0BC2E";
 /// The version of this program.
 pub const CURRENT: &str = env!("CARGO_PKG_VERSION");
-/// Inno Setup AppId (installer/pcscanner.iss), used to find the installed copy.
+/// Inno Setup AppId (installer/storagescout.iss), used to find the installed copy.
 #[cfg(windows)]
-const APP_ID: &str = "{2A3DA3C9-B524-428F-86AE-1FB1E103E09F}";
+const APP_ID: &str = "{0052F372-1524-4554-8560-B84F9169242B}";
 
 /// Largest installer that will be downloaded.
 const MAX_INSTALLER: u64 = 512 * 1024 * 1024;
@@ -124,7 +124,7 @@ fn agent() -> ureq::Agent {
         .timeout_recv_response(Some(Duration::from_secs(30)))
         .timeout_recv_body(Some(Duration::from_secs(60)))
         // A generic name only: no user, machine or install details are sent.
-        .user_agent(format!("PC-Scanner-Updater/{CURRENT}"))
+        .user_agent(format!("StorageScout-Updater/{CURRENT}"))
         .build()
         .into()
 }
@@ -187,7 +187,7 @@ fn release_from_api(api: ApiRelease) -> Result<Option<Release>, String> {
         })
     };
     Ok(Some(Release {
-        installer: find(&format!("PCScanner-Setup-{version}-x64.exe"))?,
+        installer: find(&format!("StorageScout-Setup-{version}-x64.exe"))?,
         sums: find("SHA256SUMS.txt")?,
         notes: api.body.unwrap_or_default(),
         page: api.html_url,
@@ -212,7 +212,7 @@ fn expected_hash(sums: &str, name: &str) -> Option<String> {
 
 /// Folder the installer is downloaded to.
 pub fn download_dir() -> PathBuf {
-    std::env::temp_dir().join("PC Scanner update")
+    std::env::temp_dir().join("StorageScout update")
 }
 
 /// Download the installer, check its SHA-256 and signature. On any failure the file is deleted.
@@ -314,7 +314,7 @@ fn download_to(
         .collect())
 }
 
-/// Run the verified installer silently. It closes PC Scanner, installs over the current
+/// Run the verified installer silently. It closes StorageScout, installs over the current
 /// version (keeping the install folder and the settings) and starts the new version.
 pub fn launch_installer(path: &Path) -> Result<(), String> {
     std::process::Command::new(path)
@@ -323,7 +323,7 @@ pub fn launch_installer(path: &Path) -> Result<(), String> {
             "/SUPPRESSMSGBOXES",
             "/NORESTART",
             "/CLOSEAPPLICATIONS",
-            // PC Scanner ignores Restart Manager's polite close request (tested: setup then
+            // StorageScout ignores Restart Manager's polite close request (tested: setup then
             // stops with exit code 5), so let setup end any copy that is still running.
             // This copy quits itself right after starting setup.
             "/FORCECLOSEAPPLICATIONS",
@@ -565,11 +565,11 @@ mod tests {
     fn checksums() {
         let h = "a".repeat(64);
         let sums = format!(
-            "{h}  PCScanner-Setup-9.0.0-x64.exe\r\n{}  other.zip\n",
+            "{h}  StorageScout-Setup-9.0.0-x64.exe\r\n{}  other.zip\n",
             "b".repeat(64)
         );
         assert_eq!(
-            expected_hash(&sums, "PCScanner-Setup-9.0.0-x64.exe"),
+            expected_hash(&sums, "StorageScout-Setup-9.0.0-x64.exe"),
             Some(h)
         );
         assert_eq!(expected_hash(&sums, "missing.exe"), None);
@@ -587,8 +587,8 @@ mod tests {
             published_at: Some("2026-11-15T10:00:00Z".into()),
             assets: vec![
                 ApiAsset {
-                    name: format!("PCScanner-Setup-{v}-x64.exe"),
-                    browser_download_url: format!("{url_base}{tag}/PCScanner-Setup-{v}-x64.exe"),
+                    name: format!("StorageScout-Setup-{v}-x64.exe"),
+                    browser_download_url: format!("{url_base}{tag}/StorageScout-Setup-{v}-x64.exe"),
                     size: 10,
                 },
                 ApiAsset {
@@ -637,11 +637,11 @@ mod tests {
         println!("{:?}", check().map(|r| r.map(|r| r.version)));
     }
 
-    /// Verifies a real signed file when `PCSCANNER_SIGNED_FILE` points at one.
+    /// Verifies a real signed file when `STORAGESCOUT_SIGNED_FILE` points at one.
     #[test]
     #[ignore]
     fn signature_of_release_file() {
-        let path = std::env::var("PCSCANNER_SIGNED_FILE").expect("set PCSCANNER_SIGNED_FILE");
+        let path = std::env::var("STORAGESCOUT_SIGNED_FILE").expect("set STORAGESCOUT_SIGNED_FILE");
         println!("{:?}", verify_signature(Path::new(&path)));
     }
 }

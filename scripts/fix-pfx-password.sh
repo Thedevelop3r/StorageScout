@@ -3,17 +3,17 @@
 # carriage return (\r). The PFX is re-encrypted with the same password minus the \r, keeping the
 # same key and certificate, so the thumbprint does not change.
 #
-# Usage:  scripts/fix-pfx-password.sh [signing-dir]      (default: ~/pcscanner-signing)
+# Usage:  scripts/fix-pfx-password.sh [signing-dir]      (default: ~/storagescout-signing)
 # Then update both GitHub secrets again:
-#   gh secret set SIGNING_CERT_PFX_BASE64 < ~/pcscanner-signing/pcscanner-codesign.pfx.base64
-#   gh secret set SIGNING_CERT_PASSWORD   < ~/pcscanner-signing/password.txt
+#   gh secret set SIGNING_CERT_PFX_BASE64 < ~/storagescout-signing/storagescout-codesign.pfx.base64
+#   gh secret set SIGNING_CERT_PASSWORD   < ~/storagescout-signing/password.txt
 
 set -euo pipefail
 export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*"
 umask 077
 
-dir="${1:-$HOME/pcscanner-signing}"
-NAME="pcscanner-codesign"
+dir="${1:-$HOME/storagescout-signing}"
+NAME="storagescout-codesign"
 cd "$dir"
 
 if ! grep -q $'\r' password.txt; then
@@ -32,7 +32,7 @@ export NEWPASS
 tmp="$NAME.tmp.pem"
 trap 'rm -f "$tmp" "$NAME.new.pfx"' EXIT
 openssl pkcs12 -in "$NAME.pfx" -passin file:password.txt -nodes -out "$tmp"
-openssl pkcs12 -export -name "PC Scanner code signing" -in "$tmp" -out "$NAME.new.pfx" \
+openssl pkcs12 -export -name "StorageScout code signing" -in "$tmp" -out "$NAME.new.pfx" \
   -passout env:NEWPASS -keypbe AES-256-CBC -certpbe AES-256-CBC -macalg SHA256
 rm -f "$tmp"
 

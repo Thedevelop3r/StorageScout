@@ -353,7 +353,7 @@ fn program_table(
                         }
                         if let Some((id, _)) = measured
                             && data.is_some()
-                            && ui.button("🔭 Browse in PC Scanner").clicked()
+                            && ui.button("🔭 Browse in StorageScout").clicked()
                         {
                             actions_out.push(UiAction::ShowInExplorer(id));
                             ui.close();
@@ -505,7 +505,7 @@ fn portable_table(
                         sel_actions.push(UiAction::Reveal(tree.path(g.exes[0])));
                         ui.close();
                     }
-                    if ui.button("🔭 Browse in PC Scanner").clicked() {
+                    if ui.button("🔭 Browse in StorageScout").clicked() {
                         sel_actions.push(UiAction::ShowInExplorer(g.folder));
                         ui.close();
                     }
