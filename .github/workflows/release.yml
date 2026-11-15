@@ -9,7 +9,7 @@
 #
 # Release: bump `version` in Cargo.toml and merge to `main`. When `main` has a version that
 # has no `v<version>` tag yet, the build is signed and published as release `v<version>`
-# (the tag is created by the release). Pushing a tag such as `v0.2.0` does the same.
+# (the tag is created by the release). Pushing a tag such as `v1.0.0` does the same.
 # A published release needs the signing secrets: the app refuses unsigned updates.
 # Other branch pushes and pull requests produce unsigned test builds; a manual run with
 # "sign" ticked produces a signed build without publishing it.
@@ -222,5 +222,5 @@ jobs:
             --generate-notes \
             --notes "$note
 
-          Download \`PCScanner-Setup-${TAG#v}-x64.exe\` to install, or the portable zip to run without installing. Checksums are in \`SHA256SUMS.txt\`. Installed copies of PC Scanner 0.2 and later offer this update themselves.
+          Download \`PCScanner-Setup-${TAG#v}-x64.exe\` to install, or the portable zip to run without installing. Checksums are in \`SHA256SUMS.txt\`. Installed copies of PC Scanner 1.0 and later offer this update themselves.
           See the [privacy policy]($repo_url/PRIVACY.md)."
