@@ -13,7 +13,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $pfx = $env:SIGNING_PFX_PATH
-$password = $env:SIGNING_CERT_PASSWORD
+$password = "$env:SIGNING_CERT_PASSWORD".Trim()
 if (-not $pfx -or -not (Test-Path $pfx)) { throw "SIGNING_PFX_PATH is not set or the file does not exist." }
 if (-not $password) { throw "SIGNING_CERT_PASSWORD is not set." }
 

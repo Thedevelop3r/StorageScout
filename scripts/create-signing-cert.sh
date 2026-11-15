@@ -41,8 +41,8 @@ mkdir -p "$out"
 chmod 700 "$out" 2>/dev/null || true
 cd "$out"
 
-# Random password for the PFX.
-openssl rand -base64 33 | tr -d '\n' > password.txt
+# Random password for the PFX. Windows builds of OpenSSL end lines with \r\n, so strip both.
+openssl rand -base64 33 | tr -d '\r\n' > password.txt
 chmod 600 password.txt 2>/dev/null || true
 
 # Key and self-signed certificate restricted to code signing.
