@@ -45,7 +45,8 @@ Get the latest installer or portable zip from the
 - `PCScanner-Setup-<version>-x64.exe` installs PC Scanner for you or for all users, with a Start
   menu entry and an uninstaller (Settings → Apps).
 - `PCScanner-<version>-x64-portable.zip` runs without installing.
-- `SHA256SUMS.txt` lists checksums of the files.
+- `SHA256SUMS.txt` lists checksums of the files, and `pcscanner-codesign.cer` is the public
+  signing certificate.
 
 Requires 64-bit Windows 10 or 11.
 
@@ -80,12 +81,12 @@ under **Inaccessible**).
 - Space used by restore points, shadow copies and file system metadata is not visible to a file
   scan. The overview shows it as "not visible to scan".
 
-## Code signing policy
+## Code signing
 
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by
-[SignPath Foundation](https://signpath.org). Releases are built and signed by the
-[Release workflow](.github/workflows/release.yml) on GitHub-hosted runners. Team roles and the
-rules for signing are in the [code signing policy](CODE_SIGNING_POLICY.md).
+Releases are signed with the project's own self-signed certificate, so Windows SmartScreen will
+still warn when you start the installer: choose **More info → Run anyway**. The signature lets you
+verify that the file comes from this project; see [SIGNING.md](SIGNING.md) for the certificate
+thumbprint and how to check it. You can also build PC Scanner yourself from source.
 
 ## Privacy
 
@@ -112,8 +113,11 @@ The installer is written to `dist\`.
 
 1. Set `version` in `Cargo.toml` and commit.
 2. Push a tag `v<version>`, for example `v0.1.0`.
-3. The Release workflow tests, builds, signs the app and the installer through SignPath (after
-   manual approval in SignPath) and creates a draft GitHub release. Review it and publish it.
+3. The Release workflow tests, builds, signs the app, the installer and the uninstaller with the
+   project certificate, and creates a draft GitHub release. Review it and publish it.
+
+Signing needs the repository secrets `SIGNING_CERT_PFX_BASE64` and `SIGNING_CERT_PASSWORD`,
+created once with `scripts/create-signing-cert.sh` (see the comments in that script).
 
 ## Tests
 

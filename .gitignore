@@ -1,1 +1,10 @@
 /target
+/dist
+/staging
+# Code signing secrets must never be committed
+*.pfx
+*.p12
+*.key
+*.pem
+*.pfx.base64
+password.txt

@@ -164,7 +164,7 @@ view with wildcards, a *Selection* view, *Empty folders*, and command-line argum
 ## 6. Workflow
 * Work happens on the `dev` branch; commits are pushed regularly to `origin/dev`.
 * `.github/workflows/release.yml` builds on GitHub-hosted Windows runners: unsigned test builds
-  for pushes and pull requests, signed builds (SignPath) and a draft release for `v*` tags.
+  for pushes and pull requests, self-signed builds (OpenSSL certificate, signtool) and a draft release for `v*` tags.
 * Installer: Inno Setup script in `installer/`. Licence: MIT. Policies: `PRIVACY.md`,
-  `CODE_SIGNING_POLICY.md`.
+  `SIGNING.md`.
 * Build: `cargo run --release` (release mode recommended — scanning is much faster).

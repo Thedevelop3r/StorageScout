@@ -7,6 +7,8 @@
 ;   /DAppVersion=x.y.z     version shown in the installer (default 0.0.0)
 ;   /DSourceExe=path       application exe to package (default target\release\pcscanner.exe)
 ;   /DOutputDir=path       where the installer is written (default dist)
+;   /DSign                 sign installer and uninstaller; also pass a sign tool named
+;                          "pcsign", e.g. /Spcsign="powershell -File scripts\sign.ps1 $f"
 
 #ifndef AppVersion
   #define AppVersion "0.0.0"
@@ -57,6 +59,10 @@ OutputBaseFilename=PCScanner-Setup-{#AppVersion}-x64
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
+#ifdef Sign
+SignTool=pcsign
+SignedUninstaller=yes
+#endif
 CloseApplications=yes
 RestartApplications=no
 
