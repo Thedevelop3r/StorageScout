@@ -16,5 +16,24 @@ fn main() -> eframe::Result {
             .with_min_inner_size([900.0, 560.0]),
         ..Default::default()
     };
-    eframe::run_native("PC Scanner", options, Box::new(|cc| Ok(Box::new(app::PcScannerApp::new(cc)))))
+    // Optional: folders/drives passed on the command line are scanned right away.
+    // `--view=<name>` opens a specific view (overview, explorer, treemap, groups, ...).
+    let mut paths: Vec<std::path::PathBuf> = Vec::new();
+    let mut view: Option<String> = None;
+    for arg in std::env::args_os().skip(1) {
+        let s = arg.to_string_lossy();
+        if let Some(v) = s.strip_prefix("--view=") {
+            view = Some(v.to_lowercase());
+        } else {
+            let p = std::path::PathBuf::from(&arg);
+            if p.is_dir() {
+                paths.push(p);
+            }
+        }
+    }
+    eframe::run_native(
+        "PC Scanner",
+        options,
+        Box::new(move |cc| Ok(Box::new(app::PcScannerApp::new(cc, paths, view.as_deref())))),
+    )
 }

@@ -12,6 +12,7 @@ pub enum Category {
     Archive,
     Program,
     Code,
+    Build,
     Game,
     DiskImage,
     Database,
@@ -21,7 +22,7 @@ pub enum Category {
 }
 
 impl Category {
-    pub const ALL: [Category; 13] = [
+    pub const ALL: [Category; 14] = [
         Category::Video,
         Category::Audio,
         Category::Image,
@@ -29,6 +30,7 @@ impl Category {
         Category::Archive,
         Category::Program,
         Category::Code,
+        Category::Build,
         Category::Game,
         Category::DiskImage,
         Category::Database,
@@ -50,6 +52,7 @@ impl Category {
             Category::Archive => "Archives",
             Category::Program => "Programs & Libraries",
             Category::Code => "Source Code",
+            Category::Build => "Build Output",
             Category::Game => "Game Data",
             Category::DiskImage => "Disk Images & VMs",
             Category::Database => "Databases",
@@ -68,6 +71,7 @@ impl Category {
             Category::Archive => "📦",
             Category::Program => "⚙",
             Category::Code => "💻",
+            Category::Build => "🔨",
             Category::Game => "🎮",
             Category::DiskImage => "💿",
             Category::Database => "🗄",
@@ -86,6 +90,7 @@ impl Category {
             Category::Archive => Color32::from_rgb(0x9C, 0x6A, 0xDE),
             Category::Program => Color32::from_rgb(0x3F, 0xB5, 0x8A),
             Category::Code => Color32::from_rgb(0x2E, 0xC4, 0xC4),
+            Category::Build => Color32::from_rgb(0x5E, 0x9C, 0xA0),
             Category::Game => Color32::from_rgb(0xD6, 0x5C, 0xB0),
             Category::DiskImage => Color32::from_rgb(0x8A, 0x8F, 0xE0),
             Category::Database => Color32::from_rgb(0x6B, 0xA3, 0x4E),
@@ -116,18 +121,21 @@ impl Category {
             | "cab" | "arj" | "z" | "tbz2" | "txz" => Category::Archive,
             "exe" | "msi" | "msix" | "appx" | "msixbundle" | "appxbundle" | "dll" | "sys"
             | "ocx" | "com" | "scr" | "so" | "dylib" | "app" | "deb" | "rpm" | "apk" | "jar"
-            | "bat" | "cmd" | "ps1" | "msp" | "efi" | "drv" | "cpl" | "lib" | "a" | "pyd" => {
+            | "bat" | "cmd" | "ps1" | "msp" | "efi" | "drv" | "cpl" | "pyd" => {
                 Category::Program
             }
             "rs" | "c" | "h" | "cpp" | "hpp" | "cc" | "cs" | "java" | "kt" | "py" | "js"
             | "jsx" | "tsx" | "go" | "rb" | "php" | "swift" | "m" | "mm" | "lua" | "pl" | "sh"
             | "html" | "htm" | "css" | "scss" | "less" | "json" | "xml" | "yaml" | "yml"
             | "toml" | "sql" | "vue" | "dart" | "scala" | "r" | "ipynb" | "sln" | "csproj"
-            | "vcxproj" | "gradle" | "cmake" | "mk" | "pdb" | "obj" | "o" | "rlib" | "rmeta"
-            | "class" | "pyc" | "wasm" | "map" => Category::Code,
+            | "vcxproj" | "gradle" | "cmake" | "mk" | "wasm" | "map" => Category::Code,
+            "pdb" | "obj" | "o" | "rlib" | "rmeta" | "class" | "pyc" | "pyo" | "lib" | "a"
+            | "d" | "ilk" | "exp" | "idb" | "pch" | "ipch" | "tlog" | "lastbuildstate" | "iobj"
+            | "ipdb" | "gch" | "dex" | "nupkg" | "whl" | "crate" => Category::Build,
             "pak" | "vpk" | "bsa" | "ba2" | "wad" | "upk" | "uasset" | "umap" | "forge"
             | "big" | "sav" | "esm" | "esp" | "unity3d" | "assets" | "bundle" | "pck" | "gcf"
-            | "ncf" | "vdf" | "acf" => Category::Game,
+            | "ncf" | "vdf" | "acf" | "rpf" | "cpk" | "xnb" | "pkg" | "archive" | "ff" | "ipak"
+            | "xpak" | "toc" | "cas" | "sb" | "rgssad" | "oodle" => Category::Game,
             "iso" | "img" | "vhd" | "vhdx" | "vmdk" | "vdi" | "qcow2" | "ova" | "ovf" | "dmg"
             | "wim" | "esd" | "swm" | "nrg" | "bin" | "cue" | "avhdx" | "vmem" | "vmsn" => {
                 Category::DiskImage

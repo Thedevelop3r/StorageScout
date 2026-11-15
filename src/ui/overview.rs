@@ -147,7 +147,7 @@ fn drive_card(ui: &mut Ui, d: &DriveInfo, data: Option<&ScanData>) {
     egui::Frame::group(ui.style()).inner_margin(10.0).show(ui, |ui| {
         ui.set_width(260.0);
         ui.horizontal(|ui| {
-            ui.label(RichText::new("🖴").size(22.0));
+            ui.label(RichText::new("💽").size(22.0));
             ui.vertical(|ui| {
                 ui.label(RichText::new(d.display_name()).strong());
                 let removable = if d.removable { " · removable" } else { "" };

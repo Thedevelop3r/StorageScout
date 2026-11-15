@@ -37,20 +37,48 @@ pub enum View {
 }
 
 impl View {
+    const ALL: [View; 15] = [
+        View::Overview,
+        View::Explorer,
+        View::Treemap,
+        View::Categories,
+        View::Extensions,
+        View::LargestFiles,
+        View::LargestFolders,
+        View::OldFiles,
+        View::EmptyFolders,
+        View::Duplicates,
+        View::Programs,
+        View::Cleanup,
+        View::Search,
+        View::Selection,
+        View::Errors,
+    ];
+
+    /// Parse a view name such as "treemap" or "largest-files".
+    fn from_name(name: &str) -> Option<View> {
+        let n: String = name.chars().filter(|c| c.is_ascii_alphanumeric()).collect::<String>().to_lowercase();
+        View::ALL.into_iter().find(|v| {
+            let dbg = format!("{v:?}").to_lowercase();
+            let label: String = v.label().chars().filter(|c| c.is_ascii_alphanumeric()).collect::<String>().to_lowercase();
+            dbg == n || label == n
+        })
+    }
+
     fn label(self) -> &'static str {
         match self {
             View::Overview => "🏠 Overview",
-            View::Explorer => "🗂 Explorer",
+            View::Explorer => "📂 Explorer",
             View::Treemap => "▦ Treemap",
-            View::Categories => "🧺 Groups",
+            View::Categories => "📊 Groups",
             View::Extensions => "🏷 File types",
             View::LargestFiles => "📄 Largest files",
             View::LargestFolders => "📁 Largest folders",
             View::OldFiles => "⌛ Old files",
-            View::EmptyFolders => "🗋 Empty folders",
+            View::EmptyFolders => "📂 Empty folders",
             View::Duplicates => "👯 Duplicates",
-            View::Programs => "🧩 Programs",
-            View::Cleanup => "🧹 Cleanup",
+            View::Programs => "⚙ Programs",
+            View::Cleanup => "✨ Cleanup",
             View::Search => "🔍 Search",
             View::Selection => "☑ Selection",
             View::Errors => "⚠ Inaccessible",
@@ -104,7 +132,7 @@ pub struct PcScannerApp {
 }
 
 impl PcScannerApp {
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>, start_paths: Vec<PathBuf>, start_view: Option<&str>) -> Self {
         cc.egui_ctx.set_theme(egui::ThemePreference::Dark);
         cc.egui_ctx.global_style_mut(|s| {
             s.spacing.item_spacing = egui::vec2(8.0, 5.0);
@@ -121,7 +149,7 @@ impl PcScannerApp {
             ctx.request_repaint();
         });
 
-        Self {
+        let mut app = Self {
             view: View::Overview,
             drives,
             drive_checked,
@@ -148,7 +176,22 @@ impl PcScannerApp {
             cleanup: Default::default(),
             search: Default::default(),
             errors: Default::default(),
+        };
+        if !start_paths.is_empty() {
+            app.drive_checked.iter_mut().for_each(|c| *c = false);
+            for p in start_paths {
+                // A drive root ticks that drive; anything else is a custom folder.
+                match app.drives.iter().position(|d| same_path(&d.mount, &p)) {
+                    Some(i) => app.drive_checked[i] = true,
+                    None => app.custom_roots.push(p),
+                }
+            }
+            app.start_scan(&cc.egui_ctx);
         }
+        if let Some(v) = start_view.and_then(View::from_name) {
+            app.view = v;
+        }
+        app
     }
 
     /// Re-read drive sizes, keeping the user's check marks.
@@ -379,7 +422,7 @@ impl PcScannerApp {
             let scanning = self.scan.is_some();
             ui.add_enabled_ui(!scanning, |ui| {
                 for (i, d) in self.drives.iter().enumerate() {
-                    let label = format!("🖴 {}  {}", d.mount.display(), format::size(d.used()));
+                    let label = format!("💽 {}  {}", d.mount.display(), format::size(d.used()));
                     ui.checkbox(&mut self.drive_checked[i], label)
                         .on_hover_text(format!("{}\n{} free of {}", d.display_name(), format::size(d.available), format::size(d.total)));
                 }
@@ -642,7 +685,7 @@ impl PcScannerApp {
                 ui.label(RichText::new(format!("{} item(s) · {}", c.targets.len(), format::size(c.total))).strong().size(15.0));
                 egui::ScrollArea::vertical().max_height(180.0).show(ui, |ui| {
                     for t in c.targets.iter().take(200) {
-                        let prefix = if t.contents_only { "🧹 contents of " } else { "" };
+                        let prefix = if t.contents_only { "✨ contents of " } else { "" };
                         ui.label(RichText::new(format!("{prefix}{}  ({})", t.path.display(), format::size(t.size))).small());
                     }
                     if c.targets.len() > 200 {
@@ -708,6 +751,11 @@ fn selection_view(ui: &mut Ui, ctx: &mut Ctx) {
     if let Some(id) = out.activated {
         ctx.actions.push(UiAction::ShowInExplorer(id));
     }
+}
+
+fn same_path(a: &std::path::Path, b: &std::path::Path) -> bool {
+    let norm = |p: &std::path::Path| p.to_string_lossy().replace('/', "\\").trim_end_matches('\\').to_lowercase();
+    norm(a) == norm(b)
 }
 
 fn save_dialog(name: &str, ext: &str) -> Option<PathBuf> {

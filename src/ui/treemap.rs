@@ -43,7 +43,7 @@ pub fn show(ui: &mut Ui, state: &mut TreemapState, ctx: &mut Ctx) {
                 ui.label("Pick a scanned location:");
                 for &r in &tree.roots {
                     let n = tree.get(r);
-                    if ui.button(format!("🖴 {}  —  {}", n.name, format::size(n.size))).clicked() {
+                    if ui.button(format!("💽 {}  —  {}", n.name, format::size(n.size))).clicked() {
                         state.current = Some(r);
                     }
                 }
@@ -186,7 +186,9 @@ fn layout_children(tree: &FileTree, dir: NodeId, rect: Rect, depth: usize, max_d
         }
         out.push(Cell { id, rect: r, depth });
         let n = tree.get(id);
-        if n.is_dir && depth + 1 < max_depth && r.width() > 30.0 && r.height() > HEADER + 16.0 {
+        // Respect the depth limit, but keep subdividing big areas so they never stay empty.
+        let big = r.width() > 160.0 && r.height() > 120.0;
+        if n.is_dir && (depth + 1 < max_depth || big) && r.width() > 30.0 && r.height() > HEADER + 16.0 {
             let inner = Rect::from_min_max(pos2(r.left() + 2.0, r.top() + HEADER), pos2(r.right() - 2.0, r.bottom() - 2.0));
             layout_children(tree, id, inner, depth + 1, max_depth, out);
         }

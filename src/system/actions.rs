@@ -238,6 +238,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn permanent_delete_and_empty_folder() {
+        let dir = std::env::temp_dir().join(format!("pcscanner_del_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("keep/inner")).unwrap();
+        std::fs::write(dir.join("keep/a.txt"), b"a").unwrap();
+        std::fs::write(dir.join("keep/inner/b.txt"), b"b").unwrap();
+        std::fs::write(dir.join("gone.txt"), b"x").unwrap();
+
+        assert!(delete_one(&dir.join("gone.txt"), DeleteMode::Permanent).is_ok());
+        assert!(!dir.join("gone.txt").exists());
+
+        let (r, kept) = delete_contents(&dir.join("keep"), DeleteMode::Permanent);
+        assert!(r.is_ok());
+        assert!(kept.is_empty());
+        assert!(dir.join("keep").exists());
+        assert_eq!(std::fs::read_dir(dir.join("keep")).unwrap().count(), 0);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn protects_roots() {
         #[cfg(windows)]
         {

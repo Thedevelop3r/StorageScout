@@ -55,7 +55,7 @@ pub fn show(ui: &mut Ui, st: &mut CleanupState, ctx: &mut Ctx) {
                     ui.label(RichText::new(&item.title).strong());
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         let verb = match item.kind {
-                            CleanKind::Contents => "🧹 Clean",
+                            CleanKind::Contents => "✨ Clean",
                             CleanKind::Whole => "🗑 Remove",
                         };
                         if ui.button(verb).clicked() {

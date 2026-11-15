@@ -65,7 +65,7 @@ pub struct Ctx<'a> {
 pub fn node_icon(tree: &FileTree, id: NodeId) -> &'static str {
     let n = tree.get(id);
     if n.is_dir {
-        if n.parent == crate::model::tree::NO_PARENT { "🖴" } else { "📁" }
+        if n.parent == crate::model::tree::NO_PARENT { "💽" } else { "📁" }
     } else {
         n.category.icon()
     }
@@ -126,7 +126,7 @@ pub fn node_context_menu(ui: &mut Ui, ctx: &mut Ctx, id: NodeId) {
         ctx.actions.push(UiAction::Reveal(path.clone()));
         ui.close();
     }
-    if ui.button("🗂 Browse here in PC Scanner").clicked() {
+    if ui.button("🔭 Browse here in PC Scanner").clicked() {
         ctx.actions.push(UiAction::ShowInExplorer(id));
         ui.close();
     }
@@ -145,7 +145,7 @@ pub fn node_context_menu(ui: &mut Ui, ctx: &mut Ctx, id: NodeId) {
         ui.close();
     }
     ui.separator();
-    if is_dir && ui.button("🧹 Empty this folder…").clicked() {
+    if is_dir && ui.button("✨ Empty this folder…").clicked() {
         ctx.actions.push(UiAction::DeleteContents(vec![id]));
         ui.close();
     }

@@ -100,8 +100,8 @@ pub fn show(ui: &mut Ui, st: &mut ProgramsState, programs: Option<&[Program]>, d
 
     ui.horizontal(|ui| {
         let inst_size: u64 = installed.iter().map(|&i| st.size_of(i, &programs[i])).sum();
-        ui.selectable_value(&mut st.tab, Tab::Installed, format!("🧩 Installed ({}, {})", installed.len(), format::size(inst_size)));
-        ui.selectable_value(&mut st.tab, Tab::Store, format!("🛍 Store apps ({})", store.len()));
+        ui.selectable_value(&mut st.tab, Tab::Installed, format!("⚙ Installed ({}, {})", installed.len(), format::size(inst_size)));
+        ui.selectable_value(&mut st.tab, Tab::Store, format!("⬇ Store apps ({})", store.len()));
         let portable_label = if data.is_some() { format!("📦 Not installed / portable ({})", st.portable.len()) } else { "📦 Not installed / portable".to_owned() };
         ui.selectable_value(&mut st.tab, Tab::Portable, portable_label);
         ui.separator();
@@ -271,7 +271,7 @@ fn program_table(ui: &mut Ui, st: &mut ProgramsState, programs: &[Program], rows
                         }
                         if let Some((id, _)) = measured
                             && data.is_some()
-                            && ui.button("🗂 Browse in PC Scanner").clicked()
+                            && ui.button("🔭 Browse in PC Scanner").clicked()
                         {
                             actions_out.push(UiAction::ShowInExplorer(id));
                             ui.close();
@@ -382,7 +382,7 @@ fn portable_table(ui: &mut Ui, st: &mut ProgramsState, data: &ScanData, search: 
                         sel_actions.push(UiAction::Reveal(tree.path(g.exes[0])));
                         ui.close();
                     }
-                    if ui.button("🗂 Browse in PC Scanner").clicked() {
+                    if ui.button("🔭 Browse in PC Scanner").clicked() {
                         sel_actions.push(UiAction::ShowInExplorer(g.folder));
                         ui.close();
                     }

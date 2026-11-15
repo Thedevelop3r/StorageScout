@@ -140,16 +140,26 @@ src/
 
 ## 5. Milestones
 
-| Milestone | Content |
-|-----------|---------|
-| M1 | Cargo project, app shell, navigation, drive list |
-| M2 | Parallel scanner, progress, cancel, FileTree arena |
-| M3 | Explorer view, category & extension groups, largest/old files |
-| M4 | Treemap |
-| M5 | Programs inventory (installed, Store, portable) |
-| M6 | Actions: open / reveal / copy / trash / delete with safety rules |
-| M7 | Duplicates finder, cleanup suggestions |
-| M8 | Export, polish, README, tests for core logic |
+| Milestone | Content | Status |
+|-----------|---------|--------|
+| M1 | Cargo project, app shell, navigation, drive list | Done |
+| M2 | Parallel scanner, progress, cancel, FileTree arena | Done |
+| M3 | Explorer view, category & extension groups, largest/old files | Done |
+| M4 | Treemap | Done |
+| M5 | Programs inventory (installed, Store, portable) | Done |
+| M6 | Actions: open / reveal / copy / trash / delete with safety rules | Done |
+| M7 | Duplicates finder, cleanup suggestions | Done |
+| M8 | Export, polish, README, tests for core logic | Done |
+
+Added along the way: a separate *Build Output* category (`.pdb`, `.rlib`, `.o` …), a *Search*
+view with wildcards, a *Selection* view, *Empty folders*, and command-line arguments
+(`pcscanner <paths…> --view=<name>`).
+
+### Ideas for later
+* Measure allocated size on disk (compression, sparse files, hard links counted once).
+* Save and compare scans over time ("what grew since last week").
+* Read NTFS MFT directly for even faster scans (needs administrator rights).
+* Scheduled scans and low-space alerts.
 
 ## 6. Workflow
 * Work happens on the `dev` branch; commits are pushed regularly to `origin/dev`.
