@@ -257,6 +257,24 @@ mod tests {
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
+    /// Moves two temp files to the real Recycle Bin, so it is ignored by default.
+    #[test]
+    #[ignore]
+    fn recycle_bin_batch_deletes_all() {
+        let dir = std::env::temp_dir().join(format!("pcscanner_trash_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let a = dir.join("pcscanner_test_a.mp4");
+        let b = dir.join("pcscanner_test_b.mp4");
+        std::fs::write(&a, b"a").unwrap();
+        std::fs::write(&b, b"b").unwrap();
+        let ra = delete_one(&a, DeleteMode::RecycleBin);
+        let rb = delete_one(&b, DeleteMode::RecycleBin);
+        assert!(ra.is_ok(), "{ra:?}");
+        assert!(rb.is_ok(), "{rb:?}");
+        assert!(!a.exists() && !b.exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     #[test]
     fn protects_roots() {
         #[cfg(windows)]

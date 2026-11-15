@@ -149,7 +149,20 @@ pub fn node_context_menu(ui: &mut Ui, ctx: &mut Ctx, id: NodeId) {
         ctx.actions.push(UiAction::DeleteContents(vec![id]));
         ui.close();
     }
-    if ui.button(RichText::new("🗑 Delete…").color(Color32::from_rgb(0xE0, 0x60, 0x60))).clicked() {
+    let red = Color32::from_rgb(0xE0, 0x60, 0x60);
+    let multi = selected && ctx.selection.len() > 1;
+    if multi {
+        // Right-clicking a ticked row acts on every ticked item, like a file manager.
+        let label = format!("🗑 Delete {} selected items…", ctx.selection.len());
+        if ui.button(RichText::new(label).color(red)).clicked() {
+            ctx.actions.push(UiAction::Delete(ctx.selection.iter().copied().collect()));
+            ui.close();
+        }
+        if ui.button(RichText::new("🗑 Delete only this item…").color(red)).clicked() {
+            ctx.actions.push(UiAction::Delete(vec![id]));
+            ui.close();
+        }
+    } else if ui.button(RichText::new("🗑 Delete…").color(red)).clicked() {
         ctx.actions.push(UiAction::Delete(vec![id]));
         ui.close();
     }
