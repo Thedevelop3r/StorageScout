@@ -37,8 +37,8 @@ PC Scanner is built from open source Rust libraries that are compiled into the p
 them sends data over the network as used by PC Scanner. The full list is in
 [`Cargo.lock`](Cargo.lock).
 
-Releases are signed with the project's own certificate when they are built on GitHub (see
-[SIGNING.md](SIGNING.md)). Signing does not involve your computer or your data.
+Releases are signed through SignPath (or with the project's own certificate) when they are built
+on GitHub (see [SIGNING.md](SIGNING.md)). Signing does not involve your computer or your data.
 
 Downloading PC Scanner from GitHub is subject to the
 [GitHub Privacy Statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement).

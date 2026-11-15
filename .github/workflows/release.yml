@@ -1,11 +1,18 @@
-# Builds PC Scanner on a GitHub-hosted Windows runner, signs the application, the installer
-# and the uninstaller with the project's self-signed code signing certificate, and creates a
-# draft GitHub release for version tags.
+# Builds PC Scanner on a GitHub-hosted Windows runner, signs the application and the installer,
+# and creates a draft GitHub release for version tags.
 #
-# Setup (Settings > Secrets and variables > Actions > Repository secrets):
-#   SIGNING_CERT_PFX_BASE64   base64 of pcscanner-codesign.pfx (see scripts/create-signing-cert.sh)
-#   SIGNING_CERT_PASSWORD     the PFX password
-# Without these secrets, builds are unsigned.
+# Signing, in order of preference (Settings > Secrets and variables > Actions):
+#   1. SignPath (free OSS code signing by the SignPath Foundation)
+#        Secret    SIGNPATH_API_TOKEN          API token of a SignPath user with submitter rights
+#        Variable  SIGNPATH_ORGANIZATION_ID    SignPath organization id
+#        Variable  SIGNPATH_PROJECT_SLUG       e.g. pcscanner
+#        Variable  SIGNPATH_SIGNING_POLICY     e.g. release-signing
+#      Artifact configurations "exe" and "installer" must exist in the SignPath project
+#      (copy them from .signpath/artifact-configurations).
+#   2. The project's self-signed certificate (see scripts/create-signing-cert.sh)
+#        Secret    SIGNING_CERT_PFX_BASE64     base64 of pcscanner-codesign.pfx
+#        Secret    SIGNING_CERT_PASSWORD       the PFX password
+#   3. Neither configured: unsigned build.
 #
 # Release: bump `version` in Cargo.toml, commit, then push a tag such as `v0.1.0`.
 # Tag builds (or a manual run with "sign" ticked) are signed. Branch pushes and pull
@@ -22,7 +29,7 @@ on:
   workflow_dispatch:
     inputs:
       sign:
-        description: "Sign the build"
+        description: "Sign the build (SignPath, or the self-signed certificate)"
         type: boolean
         default: false
 
@@ -40,12 +47,18 @@ jobs:
   build:
     name: Build, sign and package (Windows x64)
     runs-on: windows-latest
-    timeout-minutes: 60
+    # SignPath requests may wait for manual approval.
+    timeout-minutes: 300
+    permissions:
+      contents: read
+      actions: read
     env:
-      SIGN: ${{ (startsWith(github.ref, 'refs/tags/v') || inputs.sign) && secrets.SIGNING_CERT_PFX_BASE64 != '' }}
+      WANT_SIGN: ${{ startsWith(github.ref, 'refs/tags/v') || inputs.sign == true }}
+      HAS_SIGNPATH: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+      HAS_CERT: ${{ secrets.SIGNING_CERT_PFX_BASE64 != '' }}
     outputs:
       version: ${{ steps.version.outputs.version }}
-      signed: ${{ env.SIGN }}
+      signing: ${{ steps.version.outputs.signing }}
     steps:
       - name: Check out
         uses: actions/checkout@v7
@@ -60,8 +73,14 @@ jobs:
           if ("${{ github.ref_type }}" -eq "tag" -and "${{ github.ref_name }}" -ne "v$version") {
             throw "Tag ${{ github.ref_name }} does not match Cargo.toml version $version"
           }
+          $signing = if ($env:WANT_SIGN -ne 'true') { 'none' }
+                     elseif ($env:HAS_SIGNPATH -eq 'true') { 'signpath' }
+                     elseif ($env:HAS_CERT -eq 'true') { 'self' }
+                     else { 'none' }
           "version=$version" >> $env:GITHUB_OUTPUT
-          Write-Host "Version $version, signing: $env:SIGN"
+          "signing=$signing" >> $env:GITHUB_OUTPUT
+          "SIGNING=$signing" >> $env:GITHUB_ENV
+          Write-Host "Version $version, signing: $signing"
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -72,8 +91,9 @@ jobs:
       - name: Build
         run: cargo build --release --locked
 
+      # ---- Self-signed certificate ------------------------------------------------------------
       - name: Load signing certificate
-        if: env.SIGN == 'true'
+        if: env.SIGNING == 'self'
         shell: pwsh
         env:
           PFX_BASE64: ${{ secrets.SIGNING_CERT_PFX_BASE64 }}
@@ -82,12 +102,42 @@ jobs:
           [IO.File]::WriteAllBytes($path, [Convert]::FromBase64String($env:PFX_BASE64.Trim()))
           "SIGNING_PFX_PATH=$path" >> $env:GITHUB_ENV
 
-      - name: Sign application
-        if: env.SIGN == 'true'
+      - name: Sign application (self-signed)
+        if: env.SIGNING == 'self'
         shell: pwsh
         env:
           SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
         run: ./scripts/sign.ps1 target/release/pcscanner.exe
+
+      # ---- SignPath ---------------------------------------------------------------------------
+      - name: Upload unsigned application
+        id: upload-exe
+        if: env.SIGNING == 'signpath'
+        uses: actions/upload-artifact@v7
+        with:
+          name: pcscanner-exe-unsigned
+          path: target/release/pcscanner.exe
+          if-no-files-found: error
+
+      - name: Sign application (SignPath)
+        if: env.SIGNING == 'signpath'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY }}
+          wait-for-completion: true
+          # Each release is approved manually in SignPath; allow time for that.
+          wait-for-completion-timeout-in-seconds: 7200
+          artifact-configuration-slug: exe
+          github-artifact-id: ${{ steps.upload-exe.outputs.artifact-id }}
+          output-artifact-directory: signed/exe
+
+      - name: Use signed application
+        if: env.SIGNING == 'signpath'
+        shell: pwsh
+        run: Copy-Item -Force signed/exe/pcscanner.exe target/release/pcscanner.exe
 
       - name: Install Inno Setup
         shell: pwsh
@@ -108,7 +158,7 @@ jobs:
             "/DSourceExe=$((Resolve-Path target/release/pcscanner.exe).Path)",
             "/DOutputDir=$(Join-Path $PWD 'staging/installer')"
           )
-          if ($env:SIGN -eq 'true') {
+          if ($env:SIGNING -eq 'self') {
             # Inno Setup signs the installer and the uninstaller through this command.
             $sign = (Resolve-Path scripts/sign.ps1).Path
             $isccArgs += "/DSign", "/Spcsign=powershell.exe -NoProfile -ExecutionPolicy Bypass -File $sign `$f"
@@ -116,12 +166,42 @@ jobs:
           & $iscc @isccArgs installer/pcscanner.iss
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
 
+      - name: Upload unsigned installer
+        id: upload-installer
+        if: env.SIGNING == 'signpath'
+        uses: actions/upload-artifact@v7
+        with:
+          name: pcscanner-installer-unsigned
+          path: staging/installer/PCScanner-Setup-${{ steps.version.outputs.version }}-x64.exe
+          if-no-files-found: error
+
+      - name: Sign installer (SignPath)
+        if: env.SIGNING == 'signpath'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY }}
+          wait-for-completion: true
+          # Each release is approved manually in SignPath; allow time for that.
+          wait-for-completion-timeout-in-seconds: 7200
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.upload-installer.outputs.artifact-id }}
+          output-artifact-directory: signed/installer
+
+      - name: Use signed installer
+        if: env.SIGNING == 'signpath'
+        shell: pwsh
+        run: Copy-Item -Force "signed/installer/PCScanner-Setup-${{ steps.version.outputs.version }}-x64.exe" staging/installer/
+
+      # ---- Checks and packaging ---------------------------------------------------------------
       - name: Verify signatures
-        if: env.SIGN == 'true'
+        if: env.SIGNING != 'none'
         shell: pwsh
         run: |
           $expected = $null
-          if (Test-Path signing/pcscanner-codesign.cer) {
+          if ($env:SIGNING -eq 'self' -and (Test-Path signing/pcscanner-codesign.cer)) {
             $expected = (New-Object Security.Cryptography.X509Certificates.X509Certificate2 (Resolve-Path signing/pcscanner-codesign.cer).Path).Thumbprint
           }
           foreach ($f in @("target/release/pcscanner.exe", "staging/installer/PCScanner-Setup-${{ steps.version.outputs.version }}-x64.exe")) {
@@ -148,7 +228,7 @@ jobs:
           Copy-Item target/release/pcscanner.exe portable/
           Copy-Item LICENSE portable/LICENSE.txt
           Copy-Item README.md, PRIVACY.md, SIGNING.md portable/
-          if (Test-Path signing/pcscanner-codesign.cer) {
+          if ($env:SIGNING -eq 'self' -and (Test-Path signing/pcscanner-codesign.cer)) {
             Copy-Item signing/pcscanner-codesign.cer portable/
             Copy-Item signing/pcscanner-codesign.cer release/
           }
@@ -183,10 +263,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-          SIGNED: ${{ needs.build.outputs.signed }}
+          SIGNING: ${{ needs.build.outputs.signing }}
         run: |
           repo_url="https://github.com/$GITHUB_REPOSITORY/blob/main"
-          if [ "$SIGNED" = "true" ]; then
+          if [ "$SIGNING" = "signpath" ]; then
+            note="Signed with a certificate from the SignPath Foundation. Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org). See the [code signing policy]($repo_url/SIGNING.md)."
+          elif [ "$SIGNING" = "self" ]; then
             note="Signed with the project's self-signed certificate (see [SIGNING.md]($repo_url/SIGNING.md) to verify it). Windows SmartScreen shows a warning because the certificate is not issued by a commercial authority: choose **More info → Run anyway**, or build from source."
           else
             note="**Unsigned build.** Windows SmartScreen may warn when you run it."
