@@ -23,7 +23,7 @@ use sha2::{Digest, Sha256};
 pub const REPO: &str = "Thedevelop3r/StorageScout";
 /// SHA-1 thumbprint of the project's code signing certificate
 /// (`signing/storagescout-codesign.cer`, see SIGNING.md).
-pub const THUMBPRINT: &str = "A7AAB0826FF0EE4B5CC7BC4B78722CE255D0BC2E";
+pub const THUMBPRINT: &str = "24040CC3025885EA3DEE8F65EFEE93A4F4FC0592";
 /// The version of this program.
 pub const CURRENT: &str = env!("CARGO_PKG_VERSION");
 /// Inno Setup AppId (installer/storagescout.iss), used to find the installed copy.

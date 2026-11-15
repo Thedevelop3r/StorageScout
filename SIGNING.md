@@ -7,8 +7,8 @@ created with OpenSSL ([`scripts/create-signing-cert.sh`](scripts/create-signing-
 |---|---|
 | Subject | `CN=Bilal Amjad, O=Bilal Amjad (StorageScout)` |
 | Public certificate | [`signing/storagescout-codesign.cer`](signing/storagescout-codesign.cer) |
-| SHA-1 thumbprint | `A7AAB0826FF0EE4B5CC7BC4B78722CE255D0BC2E` |
-| SHA-256 fingerprint | `A0C0D5CCF96128F8412C62988A29799617DDFB02D9CAA063BE1EE7472E3F5541` |
+| SHA-1 thumbprint | `24040CC3025885EA3DEE8F65EFEE93A4F4FC0592` |
+| SHA-256 fingerprint | `7F8DCE07E79BAC80BC8A87CC991BF409C40D380E7905F48044A4D1A16B7445EA` |
 | Valid | 15 Nov 2026 to 14 Nov 2031 |
 
 ## What is signed
@@ -34,7 +34,7 @@ changed. If you prefer, build StorageScout yourself from source (see the [README
 In PowerShell:
 
 ```powershell
-Get-AuthenticodeSignature .\StorageScout-Setup-0.1.0-x64.exe | Format-List Status, SignerCertificate, TimeStamperCertificate
+Get-AuthenticodeSignature .\StorageScout-Setup-1.0.1-x64.exe | Format-List Status, SignerCertificate, TimeStamperCertificate
 ```
 
 `Status` is `UnknownError` ("root certificate which is not trusted"); that is expected for a
@@ -42,7 +42,7 @@ self-signed certificate. Check that `SignerCertificate` shows the SHA-1 thumbpri
 can also compare file hashes with `SHA256SUMS.txt` from the release:
 
 ```powershell
-Get-FileHash .\StorageScout-Setup-0.1.0-x64.exe -Algorithm SHA256
+Get-FileHash .\StorageScout-Setup-1.0.1-x64.exe -Algorithm SHA256
 ```
 
 ## Trusting the certificate (optional)

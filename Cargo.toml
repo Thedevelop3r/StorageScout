@@ -1,6 +1,6 @@
 [package]
 name = "storagescout"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2024"
 authors = ["Bilal Amjad"]
 description = "Scan every drive, file and program on your PC, see what uses space, and clean up safely."

@@ -171,7 +171,7 @@ to icons, light theme kept. Screens: dashboard, scanning, sunburst explorer, upd
 2. The app checks the latest release at start-up, at most once a day (can be turned off).
 3. Prompt: what's new, *Install and restart* / *Remind me later* / *Skip this version*.
 4. The installer must match `SHA256SUMS.txt` and be signed with thumbprint
-   `A7AAB0826FF0EE4B5CC7BC4B78722CE255D0BC2E`, otherwise nothing is installed.
+   `24040CC3025885EA3DEE8F65EFEE93A4F4FC0592`, otherwise nothing is installed.
 5. Silent install, restart into the new version; settings and history are kept.
 6. PRIVACY.md: the only network use is the update check, which sends no personal data.
 7. Because the privacy statement promises no network use unless the user asks for it, the first

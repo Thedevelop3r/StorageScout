@@ -222,5 +222,5 @@ jobs:
             --generate-notes \
             --notes "$note
 
-          Download \`StorageScout-Setup-${TAG#v}-x64.exe\` to install, or the portable zip to run without installing. Checksums are in \`SHA256SUMS.txt\`. Installed copies of StorageScout 1.0 and later offer this update themselves.
+          Download \`StorageScout-Setup-${TAG#v}-x64.exe\` to install, or the portable zip to run without installing. Checksums are in \`SHA256SUMS.txt\`. Installed copies of StorageScout 1.0.1 and later offer this update themselves.
           See the [privacy policy]($repo_url/PRIVACY.md)."
