@@ -334,6 +334,23 @@ pub fn launch_installer(path: &Path) -> Result<(), String> {
         .map_err(|e| format!("Could not start the installer: {e}"))
 }
 
+/// True when this program runs as an MSIX package, for example installed from the
+/// Microsoft Store. The Store then delivers updates, so the built-in updater is off.
+#[cfg(windows)]
+pub fn is_store_package() -> bool {
+    use windows_sys::Win32::Storage::Packaging::Appx::GetCurrentPackageFullName;
+    const APPMODEL_ERROR_NO_PACKAGE: u32 = 15700;
+    let mut len = 0u32;
+    // SAFETY: asking for the length only; a null buffer with length 0 is allowed.
+    let rc = unsafe { GetCurrentPackageFullName(&mut len, std::ptr::null_mut()) };
+    rc != APPMODEL_ERROR_NO_PACKAGE
+}
+
+#[cfg(not(windows))]
+pub fn is_store_package() -> bool {
+    false
+}
+
 /// True when this program runs from the folder the installer put it in. Portable copies
 /// cannot be updated by the installer; they get a link to the release page instead.
 #[cfg(windows)]

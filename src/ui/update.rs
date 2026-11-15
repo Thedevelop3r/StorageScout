@@ -46,6 +46,8 @@ pub struct Updater {
     pub dialog_open: bool,
     /// Ask once whether update checks are allowed.
     pub ask_consent: bool,
+    /// Installed from the Microsoft Store: the Store updates the app, the updater is off.
+    pub store: bool,
     /// Installed with the installer (portable copies get a download link instead).
     pub installed: bool,
     demo: bool,
@@ -55,12 +57,14 @@ pub struct Updater {
 
 impl Updater {
     pub fn new(demo: bool) -> Self {
+        let store = !demo && update::is_store_package();
         Self {
+            store,
             phase: Phase::Idle,
             release: None,
             dialog_open: false,
             ask_consent: false,
-            installed: !demo && update::is_installed_copy(),
+            installed: !demo && !store && update::is_installed_copy(),
             demo,
             manual: false,
             rx: None,
@@ -118,7 +122,7 @@ impl Updater {
     }
 
     pub fn start_check(&mut self, ctx: &egui::Context, manual: bool) {
-        if self.demo || self.busy() {
+        if self.demo || self.store || self.busy() {
             return;
         }
         self.manual = manual;

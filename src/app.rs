@@ -224,7 +224,7 @@ impl PcScannerApp {
         }
         let mut updater = ui::update::Updater::new(false);
         // No network request before the user has said yes once.
-        updater.ask_consent = !settings.update_choice_made;
+        updater.ask_consent = !settings.update_choice_made && !updater.store;
         if ui::update::Updater::due(&settings) {
             updater.start_check(&cc.egui_ctx, false);
         }
@@ -291,8 +291,10 @@ impl PcScannerApp {
     /// App filled with the fictional demo computer (no disk or registry access).
     fn new_demo(start_view: Option<&str>, settings: crate::system::settings::Settings) -> Self {
         let mut updater = ui::update::Updater::new(true);
-        // `--view=update` opens the (fictional) update dialog.
-        updater.demo_offer(start_view == Some("update"));
+        // `--view=update` shows a fictional update offer and opens its dialog.
+        if start_view == Some("update") {
+            updater.demo_offer(true);
+        }
         let (drives, data, dups) = crate::demo::scan_data();
         let drive_checked = vec![true; drives.len()];
         let generation = data.generation;

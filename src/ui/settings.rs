@@ -63,6 +63,16 @@ pub fn show(
                         .color(p.text),
                 );
                 ui.add_space(4.0);
+                if updater.store {
+                    ui.label(
+                        RichText::new(
+                            "Installed from the Microsoft Store, which keeps PC Scanner up to \
+                             date. PC Scanner itself makes no network requests.",
+                        )
+                        .color(p.text_muted),
+                    );
+                    return;
+                }
                 if theme::checkbox(
                     ui,
                     &mut settings.check_updates,

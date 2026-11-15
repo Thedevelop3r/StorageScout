@@ -17,3 +17,6 @@ password.txt
 *password*.txt
 .env
 .env.*
+
+# Microsoft Store submission material (private: listing drafts, identity, packages).
+/ms-store/
