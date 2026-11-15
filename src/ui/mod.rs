@@ -7,9 +7,12 @@ pub mod errors;
 pub mod explorer;
 pub mod extensions;
 pub mod files;
+pub mod icons;
 pub mod overview;
 pub mod programs;
+pub mod scanning;
 pub mod search;
+pub mod theme;
 pub mod treemap;
 
 use std::collections::BTreeSet;
@@ -53,6 +56,10 @@ pub enum UiAction {
     ShowInExplorer(NodeId),
     ShowInTreemap(NodeId),
     Notify(String),
+    /// Switch to another view.
+    Navigate(crate::app::View),
+    /// Start a scan of the chosen drives and folders.
+    StartScan,
 }
 
 /// Read-only context shared with every view.
@@ -66,9 +73,9 @@ pub fn node_icon(tree: &FileTree, id: NodeId) -> &'static str {
     let n = tree.get(id);
     if n.is_dir {
         if n.parent == crate::model::tree::NO_PARENT {
-            "💽"
+            icons::HARD_DRIVE
         } else {
-            "📁"
+            icons::FOLDER
         }
     } else {
         n.category.icon()
@@ -94,29 +101,6 @@ pub fn size_bar(ui: &mut Ui, fraction: f32, color: Color32, width: f32) -> Respo
         painter.rect_filled(fill, rounding, color);
     }
     resp
-}
-
-/// Usage bar with a label on top, used for drives.
-pub fn usage_bar(ui: &mut Ui, used: u64, total: u64, width: f32) {
-    let f = if total == 0 {
-        0.0
-    } else {
-        used as f32 / total as f32
-    };
-    let color = if f > 0.9 {
-        Color32::from_rgb(0xE0, 0x4F, 0x4F)
-    } else if f > 0.75 {
-        Color32::from_rgb(0xE0, 0xA0, 0x3C)
-    } else {
-        Color32::from_rgb(0x3D, 0x8B, 0xE0)
-    };
-    let height = 14.0;
-    let (rect, _) = ui.allocate_exact_size(Vec2::new(width, height), Sense::hover());
-    let painter = ui.painter();
-    painter.rect_filled(rect, 4.0, ui.visuals().extreme_bg_color);
-    let mut fill = rect;
-    fill.set_width(rect.width() * f.clamp(0.0, 1.0));
-    painter.rect_filled(fill, 4.0, color);
 }
 
 /// Standard right-click menu for a node.
@@ -361,13 +345,5 @@ pub fn no_scan_placeholder(ui: &mut Ui) {
         ui.label(
             RichText::new("Tip: run as administrator to include protected system folders.").weak(),
         );
-    });
-}
-
-/// A titled stat value used on the overview.
-pub fn stat(ui: &mut Ui, title: &str, value: String) {
-    ui.vertical(|ui| {
-        ui.label(RichText::new(title).weak().small());
-        ui.label(RichText::new(value).size(18.0).strong());
     });
 }

@@ -2,7 +2,6 @@
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
-use std::sync::atomic::Ordering;
 use std::sync::mpsc::{self, Receiver};
 use std::time::{Duration, Instant};
 
@@ -76,21 +75,42 @@ impl View {
 
     fn label(self) -> &'static str {
         match self {
-            View::Overview => "🏠 Overview",
-            View::Explorer => "📂 Explorer",
-            View::Treemap => "▦ Treemap",
-            View::Categories => "📊 Groups",
-            View::Extensions => "🏷 File types",
-            View::LargestFiles => "📄 Largest files",
-            View::LargestFolders => "📁 Largest folders",
-            View::OldFiles => "⌛ Old files",
-            View::EmptyFolders => "📂 Empty folders",
-            View::Duplicates => "👯 Duplicates",
-            View::Programs => "⚙ Programs",
-            View::Cleanup => "✨ Cleanup",
-            View::Search => "🔍 Search",
-            View::Selection => "☑ Selection",
-            View::Errors => "⚠ Inaccessible",
+            View::Overview => "Dashboard",
+            View::Explorer => "Explorer",
+            View::Treemap => "Treemap",
+            View::Categories => "Groups",
+            View::Extensions => "File types",
+            View::LargestFiles => "Largest files",
+            View::LargestFolders => "Largest folders",
+            View::OldFiles => "Old files",
+            View::EmptyFolders => "Empty folders",
+            View::Duplicates => "Duplicates",
+            View::Programs => "Programs",
+            View::Cleanup => "Cleanup",
+            View::Search => "Search",
+            View::Selection => "Selection",
+            View::Errors => "Inaccessible",
+        }
+    }
+
+    fn icon(self) -> &'static str {
+        use crate::ui::icons as i;
+        match self {
+            View::Overview => i::HOUSE,
+            View::Explorer => i::FOLDER_OPEN,
+            View::Treemap => i::SQUARES_FOUR,
+            View::Categories => i::CHART_PIE_SLICE,
+            View::Extensions => i::TAG,
+            View::LargestFiles => i::FILE,
+            View::LargestFolders => i::FOLDERS,
+            View::OldFiles => i::HOURGLASS,
+            View::EmptyFolders => i::FOLDER_DASHED,
+            View::Duplicates => i::COPY,
+            View::Programs => i::APP_WINDOW,
+            View::Cleanup => i::SPARKLE,
+            View::Search => i::MAGNIFYING_GLASS,
+            View::Selection => i::CHECK_SQUARE,
+            View::Errors => i::WARNING,
         }
     }
 }
@@ -101,20 +121,18 @@ const NAV: [(&str, &[View]); 4] = [
         &[View::Overview, View::Explorer, View::Treemap, View::Search],
     ),
     (
-        "GROUPS",
-        &[View::Categories, View::Extensions, View::Programs],
-    ),
-    (
-        "FIND SPACE",
+        "Find space",
         &[
+            View::Cleanup,
+            View::Duplicates,
             View::LargestFiles,
             View::LargestFolders,
             View::OldFiles,
-            View::Duplicates,
             View::EmptyFolders,
         ],
     ),
-    ("ACT", &[View::Cleanup, View::Selection, View::Errors]),
+    ("Organise", &[View::Categories, View::Extensions]),
+    ("System", &[View::Programs, View::Selection, View::Errors]),
 ];
 
 struct ConfirmDelete {
@@ -141,6 +159,10 @@ pub struct PcScannerApp {
     dark: bool,
     /// Showing built-in fictional data; nothing on the real disk may be touched.
     demo: bool,
+    /// Sidebar shows icons only.
+    nav_collapsed: bool,
+    /// Title of the scan in progress ("Scanning 2 drives").
+    scan_title: String,
 
     explorer: ui::explorer::ExplorerState,
     treemap: ui::treemap::TreemapState,
@@ -165,10 +187,8 @@ impl PcScannerApp {
         demo: bool,
     ) -> Self {
         cc.egui_ctx.set_theme(egui::ThemePreference::Dark);
-        cc.egui_ctx.global_style_mut(|s| {
-            s.spacing.item_spacing = egui::vec2(8.0, 5.0);
-            s.spacing.button_padding = egui::vec2(8.0, 3.0);
-        });
+        ui::theme::install_fonts(&cc.egui_ctx);
+        ui::theme::apply(&cc.egui_ctx);
         if demo {
             return Self::new_demo(start_view);
         }
@@ -198,6 +218,8 @@ impl PcScannerApp {
             delete_job: None,
             message: None,
             dark: true,
+            nav_collapsed: false,
+            scan_title: String::new(),
             explorer: Default::default(),
             treemap: Default::default(),
             categories: Default::default(),
@@ -253,6 +275,8 @@ impl PcScannerApp {
                 Instant::now(),
             )),
             dark: true,
+            nav_collapsed: false,
+            scan_title: String::new(),
             demo: true,
             explorer: Default::default(),
             treemap: Default::default(),
@@ -331,6 +355,27 @@ impl PcScannerApp {
         self.treemap = Default::default();
         self.duplicates = Default::default();
         self.search = Default::default();
+        let drives_n = roots
+            .iter()
+            .filter(|r| self.drives.iter().any(|d| same_path(&d.mount, r)))
+            .count();
+        let folders_n = roots.len() - drives_n;
+        let plural = |n: usize, one: &str, many: &str| {
+            if n == 1 {
+                format!("1 {one}")
+            } else {
+                format!("{n} {many}")
+            }
+        };
+        self.scan_title = match (drives_n, folders_n) {
+            (d, 0) => format!("Scanning {}", plural(d, "drive", "drives")),
+            (0, f) => format!("Scanning {}", plural(f, "folder", "folders")),
+            (d, f) => format!(
+                "Scanning {} and {}",
+                plural(d, "drive", "drives"),
+                plural(f, "folder", "folders")
+            ),
+        };
         self.scan = Some(ScanHandle::start(roots, expected, ctx.clone()));
     }
 
@@ -541,6 +586,8 @@ impl PcScannerApp {
                     self.view = View::Treemap;
                 }
                 UiAction::Notify(m) => self.notify(m),
+                UiAction::Navigate(v) => self.view = v,
+                UiAction::StartScan => self.start_scan(ctx),
             }
         }
     }
@@ -548,35 +595,84 @@ impl PcScannerApp {
     // ------------------------------------------------------------------ panels
 
     fn top_bar(&mut self, ui: &mut Ui) {
-        ui.add_space(4.0);
+        use crate::ui::icons;
+        use crate::ui::theme;
+        let p = theme::pal(ui);
+        ui.add_space(14.0);
         ui.horizontal_wrapped(|ui| {
-            ui.label(RichText::new("🖥 PC Scanner").heading().strong());
-            if self.demo {
-                ui.label(
-                    RichText::new(" DEMO ")
-                        .strong()
-                        .color(Color32::BLACK)
-                        .background_color(Color32::from_rgb(0xF2, 0xB6, 0x3C)),
+            ui.spacing_mut().item_spacing.x = 8.0;
+            // Search shortcut (Ctrl+K)
+            let search = ui
+                .add(
+                    egui::Button::new(
+                        RichText::new(format!(
+                            "{}   Search files and folders",
+                            icons::MAGNIFYING_GLASS
+                        ))
+                        .color(p.text_muted),
+                    )
+                    .right_text(RichText::new("Ctrl K").size(11.5).color(p.text_muted))
+                    .fill(p.card)
+                    .stroke(egui::Stroke::new(1.0, p.border))
+                    .corner_radius(12)
+                    .min_size(egui::vec2(300.0, 40.0)),
                 )
-                .on_hover_text("Fictional sample data. Start without --demo to scan this PC.");
+                .on_hover_text("Search the scanned files (Ctrl+K)");
+            if search.clicked() {
+                self.view = View::Search;
             }
-            ui.separator();
+            if self.demo {
+                theme::pill(ui, "Demo data", p.warning, p.warning_bg)
+                    .on_hover_text("Fictional sample data. Start without --demo to scan this PC.");
+            }
+            ui.add_space(8.0);
+
             let scanning = self.scan.is_some();
             ui.add_enabled_ui(!scanning, |ui| {
                 for (i, d) in self.drives.iter().enumerate() {
-                    let label = format!("💽 {}  {}", d.mount.display(), format::size(d.used()));
-                    ui.checkbox(&mut self.drive_checked[i], label)
+                    let on = self.drive_checked[i];
+                    let fg = if on { p.text } else { p.text_muted };
+                    let resp = ui
+                        .add(
+                            egui::Button::new(
+                                RichText::new(format!(
+                                    "{}  {}  {}",
+                                    icons::HARD_DRIVE,
+                                    d.mount.display(),
+                                    format::size(d.used())
+                                ))
+                                .color(fg),
+                            )
+                            .fill(if on { p.accent_bg } else { p.card })
+                            .stroke(egui::Stroke::new(1.0, if on { p.accent } else { p.border }))
+                            .corner_radius(10)
+                            .min_size(egui::vec2(0.0, 36.0)),
+                        )
                         .on_hover_text(format!(
-                            "{}\n{} free of {}",
+                            "{}\n{} free of {}\nClick to include or skip this drive",
                             d.display_name(),
                             format::size(d.available),
                             format::size(d.total)
                         ));
+                    if resp.clicked() {
+                        self.drive_checked[i] = !on;
+                    }
                 }
                 let mut remove = None;
                 for (i, r) in self.custom_roots.iter().enumerate() {
                     if ui
-                        .button(format!("📁 {}  ✖", r.display()))
+                        .add(
+                            egui::Button::new(format!(
+                                "{}  {}  {}",
+                                icons::FOLDER,
+                                r.display(),
+                                icons::X
+                            ))
+                            .fill(p.accent_bg)
+                            .stroke(egui::Stroke::new(1.0, p.accent))
+                            .corner_radius(10)
+                            .min_size(egui::vec2(0.0, 36.0)),
+                        )
                         .on_hover_text("Remove this folder")
                         .clicked()
                     {
@@ -587,7 +683,13 @@ impl PcScannerApp {
                     self.custom_roots.remove(i);
                 }
                 if ui
-                    .button("➕ Folder…")
+                    .add(
+                        egui::Button::new(format!("{}  Folder", icons::PLUS))
+                            .fill(p.card)
+                            .stroke(egui::Stroke::new(1.0, p.border))
+                            .corner_radius(10)
+                            .min_size(egui::vec2(0.0, 36.0)),
+                    )
                     .on_hover_text("Scan a specific folder")
                     .clicked()
                     && let Some(dir) = rfd::FileDialog::new().pick_folder()
@@ -595,26 +697,42 @@ impl PcScannerApp {
                     self.custom_roots.push(dir);
                 }
             });
-            ui.separator();
-            if let Some(scan) = &self.scan {
-                if ui.button(RichText::new("⏹ Cancel").strong()).clicked() {
-                    scan.cancel();
-                }
-            } else if ui
-                .button(RichText::new("▶ Scan").strong().size(15.0))
-                .clicked()
-            {
-                let ctx = ui.ctx().clone();
-                self.start_scan(&ctx);
-            }
 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                let theme_icon = if self.dark { "☀" } else { "🌙" };
-                if ui
-                    .button(theme_icon)
-                    .on_hover_text("Toggle light / dark theme")
+                if let Some(scan) = &self.scan {
+                    if theme::tinted_button(
+                        ui,
+                        format!("{}  Cancel", icons::STOP),
+                        p.danger,
+                        p.danger_bg,
+                    )
                     .clicked()
-                {
+                    {
+                        scan.cancel();
+                    }
+                } else {
+                    let label = if self.data.is_some() {
+                        "Scan again"
+                    } else {
+                        "Scan"
+                    };
+                    if theme::primary_button(ui, icons::PLAY, label).clicked() {
+                        let ctx = ui.ctx().clone();
+                        self.start_scan(&ctx);
+                    }
+                }
+                let icon_btn = |ui: &mut Ui, icon: &str, tip: &str| {
+                    ui.add(
+                        egui::Button::new(RichText::new(icon).size(17.0).color(p.text_dim))
+                            .fill(p.card)
+                            .stroke(egui::Stroke::new(1.0, p.border))
+                            .corner_radius(10)
+                            .min_size(egui::vec2(36.0, 36.0)),
+                    )
+                    .on_hover_text(tip)
+                };
+                let theme_icon = if self.dark { icons::SUN } else { icons::MOON };
+                if icon_btn(ui, theme_icon, "Switch between light and dark theme").clicked() {
                     self.dark = !self.dark;
                     ui.ctx().set_theme(if self.dark {
                         egui::ThemePreference::Dark
@@ -622,44 +740,16 @@ impl PcScannerApp {
                         egui::ThemePreference::Light
                     });
                 }
-                if ui
-                    .button("🔄")
-                    .on_hover_text("Refresh drive list")
-                    .clicked()
-                {
+                if icon_btn(ui, icons::ARROW_CLOCKWISE, "Refresh the drive list").clicked() {
                     self.refresh_drives();
                 }
-                ui.menu_button("💾 Export", |ui| self.export_menu(ui));
+                ui.menu_button(
+                    RichText::new(format!("{}  Export", icons::EXPORT)).color(p.text_dim),
+                    |ui| self.export_menu(ui),
+                );
             });
         });
-
-        if let Some(scan) = &self.scan {
-            let p = &scan.progress;
-            let bytes = p.bytes.load(Ordering::Relaxed);
-            let expected = p.expected_bytes.load(Ordering::Relaxed);
-            let files = p.files.load(Ordering::Relaxed);
-            let dirs = p.dirs.load(Ordering::Relaxed);
-            let errors = p.errors.load(Ordering::Relaxed);
-            let elapsed = scan.started.elapsed().as_secs_f64();
-            let frac = if expected > 0 {
-                (bytes as f32 / expected as f32).min(0.99)
-            } else {
-                0.0
-            };
-            ui.add(egui::ProgressBar::new(frac).animate(true).text(format!(
-                "{}  ·  {} files  ·  {} folders  ·  {} inaccessible  ·  {}  ·  {:.0} files/s",
-                format::size(bytes),
-                format::count(files),
-                format::count(dirs),
-                format::count(errors),
-                format::duration(elapsed),
-                files as f64 / elapsed.max(0.1)
-            )));
-            let current = p.current.lock().map(|c| c.clone()).unwrap_or_default();
-            ui.add(egui::Label::new(RichText::new(current).weak().small()).truncate());
-            ui.ctx().request_repaint_after(Duration::from_millis(100));
-        }
-        ui.add_space(2.0);
+        ui.add_space(10.0);
     }
 
     fn export_menu(&mut self, ui: &mut Ui) {
@@ -725,40 +815,106 @@ impl PcScannerApp {
     }
 
     fn nav_panel(&mut self, ui: &mut Ui) {
-        ui.add_space(6.0);
+        use crate::ui::{icons, theme};
+        let p = theme::pal(ui);
+        let collapsed = self.nav_collapsed;
+        ui.add_space(18.0);
+        ui.horizontal(|ui| {
+            if !collapsed {
+                ui.add_space(6.0);
+            }
+            let (rect, _) = ui.allocate_exact_size(egui::vec2(38.0, 38.0), egui::Sense::hover());
+            ui.painter().rect_filled(rect, 11.0, p.accent_bg);
+            ui.painter().text(
+                rect.center(),
+                egui::Align2::CENTER_CENTER,
+                icons::MAGNIFYING_GLASS,
+                egui::FontId::proportional(21.0),
+                p.accent_text,
+            );
+            if !collapsed {
+                ui.add_space(4.0);
+                ui.vertical(|ui| {
+                    ui.spacing_mut().item_spacing.y = 0.0;
+                    ui.label(
+                        RichText::new("PC Scanner")
+                            .font(theme::heading(18.0))
+                            .color(p.text),
+                    );
+                    ui.label(
+                        RichText::new(format!("Version {}", env!("CARGO_PKG_VERSION")))
+                            .size(11.5)
+                            .color(p.text_muted),
+                    );
+                });
+            }
+        });
+        ui.add_space(14.0);
         let data = self.data.as_ref();
-        for (title, views) in NAV {
-            if !title.is_empty() {
-                ui.add_space(8.0);
-                ui.label(RichText::new(title).small().weak());
-            }
-            for &v in views {
-                let badge = match (v, data) {
-                    (View::Cleanup, Some(d)) => {
-                        Some(format::size(d.cleanup.iter().map(|c| c.size).sum()))
+        let mut go: Option<View> = None;
+        let mut toggle = false;
+        egui::ScrollArea::vertical()
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                ui.spacing_mut().item_spacing.y = 2.0;
+                for (title, views) in NAV {
+                    if !title.is_empty() {
+                        if collapsed {
+                            ui.add_space(8.0);
+                            ui.separator();
+                            ui.add_space(4.0);
+                        } else {
+                            theme::nav_section(ui, title);
+                        }
                     }
-                    (View::Selection, _) if !self.selection.is_empty() => {
-                        Some(format::count(self.selection.len() as u64))
+                    for &v in views {
+                        let badge = match (v, data) {
+                            (View::Cleanup, Some(d)) => {
+                                Some(format::size(d.cleanup.iter().map(|c| c.size).sum()))
+                            }
+                            (View::Selection, _) if !self.selection.is_empty() => {
+                                Some(format::count(self.selection.len() as u64))
+                            }
+                            (View::Errors, Some(d)) if !d.errors.is_empty() => {
+                                Some(format::count(d.errors.len() as u64))
+                            }
+                            (View::Programs, _) => {
+                                self.programs.as_ref().map(|p| p.len().to_string())
+                            }
+                            _ => None,
+                        };
+                        if theme::nav_item(
+                            ui,
+                            v.icon(),
+                            v.label(),
+                            badge.as_deref(),
+                            self.view == v,
+                            collapsed,
+                        )
+                        .clicked()
+                        {
+                            go = Some(v);
+                        }
                     }
-                    (View::Errors, Some(d)) if !d.errors.is_empty() => {
-                        Some(format::count(d.errors.len() as u64))
-                    }
-                    (View::Programs, _) => self.programs.as_ref().map(|p| p.len().to_string()),
-                    _ => None,
-                };
-                let selected = self.view == v;
-                let resp = ui.add_sized(
-                    [ui.available_width(), 26.0],
-                    egui::Button::selectable(selected, v.label()).right_text(
-                        badge
-                            .map(|b| RichText::new(b).small().weak())
-                            .unwrap_or_default(),
-                    ),
-                );
-                if resp.clicked() {
-                    self.view = v;
                 }
-            }
+                ui.add_space(16.0);
+                let label = if collapsed {
+                    "Expand sidebar"
+                } else {
+                    "Collapse sidebar"
+                };
+                if theme::nav_item(ui, icons::SIDEBAR_SIMPLE, label, None, false, collapsed)
+                    .clicked()
+                {
+                    toggle = true;
+                }
+                ui.add_space(12.0);
+            });
+        if let Some(v) = go {
+            self.view = v;
+        }
+        if toggle {
+            self.nav_collapsed = !self.nav_collapsed;
         }
     }
 
@@ -839,6 +995,12 @@ impl PcScannerApp {
 
     fn central(&mut self, ui: &mut Ui) {
         let mut actions_out: Vec<UiAction> = Vec::new();
+        if let Some(scan) = &self.scan {
+            if ui::scanning::show(ui, scan, &self.scan_title) {
+                scan.cancel();
+            }
+            return;
+        }
         let needs_scan = !matches!(self.view, View::Overview | View::Programs);
         if needs_scan && self.data.is_none() {
             if self.scan.is_some() {
@@ -854,19 +1016,13 @@ impl PcScannerApp {
         }
         match self.view {
             View::Overview => {
-                let mut ctx_holder;
-                let ctx = match &self.data {
-                    Some(d) => {
-                        ctx_holder = Ctx {
-                            data: d,
-                            selection: &self.selection,
-                            actions: &mut actions_out,
-                        };
-                        Some(&mut ctx_holder)
-                    }
-                    None => None,
-                };
-                ui::overview::show(ui, &self.drives, self.data.as_ref(), ctx);
+                ui::overview::show(
+                    ui,
+                    &self.drives,
+                    self.data.as_ref(),
+                    &self.selection,
+                    &mut actions_out,
+                );
             }
             View::Programs => {
                 ui::programs::show(
@@ -1079,13 +1235,29 @@ impl eframe::App for PcScannerApp {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         self.poll_background();
 
-        egui::Panel::top("top_bar").show(ui, |ui| self.top_bar(ui));
-        egui::Panel::bottom("bottom_bar").show(ui, |ui| self.bottom_bar(ui));
+        if ui.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::K)) {
+            self.view = View::Search;
+        }
+        let p = ui::theme::pal(ui);
+        let plain = |fill: Color32, x: i8, y: i8| {
+            egui::Frame::new()
+                .fill(fill)
+                .inner_margin(egui::Margin::symmetric(x, y))
+        };
         egui::Panel::left("nav")
             .resizable(false)
-            .exact_size(190.0)
+            .exact_size(if self.nav_collapsed { 72.0 } else { 240.0 })
+            .frame(plain(p.sidebar, 12, 0).stroke(egui::Stroke::new(1.0, p.border)))
             .show(ui, |ui| self.nav_panel(ui));
-        egui::CentralPanel::default().show(ui, |ui| self.central(ui));
+        egui::Panel::top("top_bar")
+            .frame(plain(p.bg, 28, 0))
+            .show(ui, |ui| self.top_bar(ui));
+        egui::Panel::bottom("bottom_bar")
+            .frame(plain(p.bg, 28, 6))
+            .show(ui, |ui| self.bottom_bar(ui));
+        egui::CentralPanel::default()
+            .frame(plain(p.bg, 28, 10))
+            .show(ui, |ui| self.central(ui));
         self.confirm_dialog(ui);
     }
 }
