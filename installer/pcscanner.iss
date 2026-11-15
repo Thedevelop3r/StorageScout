@@ -3,6 +3,9 @@
 ; Build (from the repository root, after `cargo build --release`):
 ;   iscc /DAppVersion=0.1.0 installer\pcscanner.iss
 ;
+; Silent update (used by PC Scanner's updater):
+;   PCScanner-Setup-x.y.z-x64.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /RELAUNCH=1
+;
 ; Optional defines:
 ;   /DAppVersion=x.y.z     version shown in the installer (default 0.0.0)
 ;   /DSourceExe=path       application exe to package (default target\release\pcscanner.exe)
@@ -84,3 +87,12 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: deskto
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+; PC Scanner updates itself by running this installer with /VERYSILENT /RELAUNCH=1;
+; start the new version afterwards, as the user (not elevated).
+Filename: "{app}\{#AppExeName}"; Flags: nowait runasoriginaluser; Check: RelaunchRequested
+
+[Code]
+function RelaunchRequested: Boolean;
+begin
+  Result := WizardSilent and (ExpandConstant('{param:RELAUNCH|0}') = '1');
+end;

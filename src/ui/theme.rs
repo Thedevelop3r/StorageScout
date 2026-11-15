@@ -11,7 +11,6 @@ use egui::{
 };
 
 /// Accent colours offered in Settings (all light enough for dark text on top).
-#[allow(dead_code)] // used by the Settings page
 pub const ACCENTS: [(&str, Color32); 4] = [
     ("Cyan", Color32::from_rgb(0x5E, 0xE6, 0xFF)),
     ("Violet", Color32::from_rgb(0x8B, 0x7C, 0xFF)),
@@ -21,7 +20,6 @@ pub const ACCENTS: [(&str, Color32); 4] = [
 
 static ACCENT: AtomicU32 = AtomicU32::new(0x5EE6FF);
 
-#[allow(dead_code)]
 pub fn set_accent(c: Color32) {
     ACCENT.store(
         ((c.r() as u32) << 16) | ((c.g() as u32) << 8) | c.b() as u32,
@@ -56,7 +54,6 @@ pub struct Palette {
     pub on_accent: Color32,
     pub violet: Color32,
     pub success: Color32,
-    #[allow(dead_code)]
     pub success_bg: Color32,
     pub warning: Color32,
     pub warning_bg: Color32,
@@ -614,4 +611,53 @@ pub fn stat_tile(ui: &mut Ui, label: &str, value: &str) {
         ui.label(RichText::new(label).size(12.0).color(p.text_muted));
         ui.label(RichText::new(value).font(heading(26.0)).color(p.text));
     });
+}
+
+/// Checkbox drawn in the theme: accent box with a tick when on, outlined box when off.
+pub fn checkbox(ui: &mut Ui, on: &mut bool, text: &str) -> Response {
+    let p = pal(ui);
+    let galley = ui
+        .painter()
+        .layout_no_wrap(text.to_owned(), FontId::proportional(14.0), p.text);
+    let side = 18.0;
+    let size = vec2(side + 10.0 + galley.size().x, side.max(galley.size().y));
+    let (rect, mut resp) = ui.allocate_exact_size(size, Sense::click());
+    if resp.clicked() {
+        *on = !*on;
+        resp.mark_changed();
+    }
+    let b = Rect::from_min_size(
+        pos2(rect.left(), rect.center().y - side / 2.0),
+        Vec2::splat(side),
+    );
+    let painter = ui.painter();
+    if *on {
+        painter.rect_filled(b, CornerRadius::same(5), p.accent);
+        painter.text(
+            b.center(),
+            egui::Align2::CENTER_CENTER,
+            crate::ui::icons::CHECK,
+            FontId::proportional(13.0),
+            p.on_accent,
+        );
+    } else {
+        let edge = if resp.hovered() {
+            p.border_hi
+        } else {
+            p.border
+        };
+        painter.rect_filled(b, CornerRadius::same(5), p.card);
+        painter.rect_stroke(
+            b,
+            CornerRadius::same(5),
+            Stroke::new(1.5, edge),
+            egui::StrokeKind::Inside,
+        );
+    }
+    painter.galley(
+        pos2(b.right() + 10.0, rect.center().y - galley.size().y / 2.0),
+        galley,
+        p.text,
+    );
+    resp.on_hover_cursor(egui::CursorIcon::PointingHand)
 }

@@ -174,6 +174,12 @@ to icons, light theme kept. Screens: dashboard, scanning, sunburst explorer, upd
    `A7AAB0826FF0EE4B5CC7BC4B78722CE255D0BC2E`, otherwise nothing is installed.
 5. Silent install, restart into the new version; settings and history are kept.
 6. PRIVACY.md: the only network use is the update check, which sends no personal data.
+7. Because the privacy statement promises no network use unless the user asks for it, the first
+   start asks once whether to check for updates; nothing is sent before the user agrees.
+
+Implemented in `src/update.rs` (GitHub API, download, SHA-256, Authenticode check pinned to the
+thumbprint), `src/ui/update.rs` (dialog and state), `src/ui/settings.rs` (Settings page) and
+`installer/pcscanner.iss` (`/RELAUNCH=1` starts the new version after a silent install).
 
 ### 7.2 Features
 | # | Feature | Phase |

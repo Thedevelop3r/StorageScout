@@ -35,7 +35,9 @@ safely.
 - **Safe deletion**: confirmation dialog, Recycle Bin by default, and protection for drive roots,
   the Windows directory, Program Files, the user profile and system-managed files.
 - **Export**: largest files and folders, programs (CSV), scan summary (JSON).
-- Light and dark theme.
+- **Updates**: if you allow it, PC Scanner checks GitHub for a new release once a day, shows
+  what's new, and installs it on request after checking the SHA-256 and the code signature.
+- **Settings**: light or dark theme, four accent colours, update preferences.
 
 ## Screenshots
 
@@ -104,8 +106,9 @@ thumbprint and how to check it. You can also build PC Scanner yourself from sour
 ## Privacy
 
 This program will not transfer any information to other networked systems unless specifically
-requested by the user or the person installing or operating it. PC Scanner has no network code,
-telemetry or analytics. See the [privacy policy](PRIVACY.md).
+requested by the user or the person installing or operating it. PC Scanner has no telemetry or
+analytics. Its only network use is the update check, which it asks permission for on first start
+and which sends no personal data. See the [privacy policy](PRIVACY.md).
 
 ## Windows installer
 
@@ -124,10 +127,15 @@ The installer is written to `dist\`.
 
 ## Releasing
 
-1. Set `version` in `Cargo.toml` and commit.
-2. Push a tag `v<version>`, for example `v0.1.0`.
-3. The Release workflow tests, builds, signs the app, the installer and the uninstaller with the
-   project certificate, and creates a draft GitHub release. Review it and publish it.
+1. Set a new `version` in `Cargo.toml` and merge the change into `main`.
+2. The Release workflow tests, builds, signs the app, the installer and the uninstaller with the
+   project certificate, and publishes release `v<version>` (it creates the tag). Pushing a tag
+   `v<version>` yourself does the same.
+3. Installed copies of PC Scanner find the new release and offer to update.
+
+A version is published only once: pushes to `main` that keep the same version build without
+publishing. Publishing fails if the signing secrets are missing, because PC Scanner refuses to
+install an unsigned update.
 
 Signing needs the repository secrets `SIGNING_CERT_PFX_BASE64` and `SIGNING_CERT_PASSWORD`,
 created once with `scripts/create-signing-cert.sh` (see the comments in that script).

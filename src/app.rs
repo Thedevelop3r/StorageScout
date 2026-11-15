@@ -33,10 +33,11 @@ pub enum View {
     Search,
     Selection,
     Errors,
+    Settings,
 }
 
 impl View {
-    const ALL: [View; 15] = [
+    const ALL: [View; 16] = [
         View::Overview,
         View::Explorer,
         View::Treemap,
@@ -52,6 +53,7 @@ impl View {
         View::Search,
         View::Selection,
         View::Errors,
+        View::Settings,
     ];
 
     /// Parse a view name such as "treemap" or "largest-files".
@@ -90,6 +92,7 @@ impl View {
             View::Search => "Search",
             View::Selection => "Selection",
             View::Errors => "Inaccessible",
+            View::Settings => "Settings",
         }
     }
 
@@ -111,6 +114,7 @@ impl View {
             View::Search => i::MAGNIFYING_GLASS,
             View::Selection => i::CHECK_SQUARE,
             View::Errors => i::WARNING,
+            View::Settings => i::GEAR_SIX,
         }
     }
 }
@@ -132,7 +136,15 @@ const NAV: [(&str, &[View]); 4] = [
         ],
     ),
     ("Organise", &[View::Categories, View::Extensions]),
-    ("System", &[View::Programs, View::Selection, View::Errors]),
+    (
+        "System",
+        &[
+            View::Programs,
+            View::Selection,
+            View::Errors,
+            View::Settings,
+        ],
+    ),
 ];
 
 struct ConfirmDelete {
@@ -156,7 +168,9 @@ pub struct PcScannerApp {
     confirm: Option<ConfirmDelete>,
     delete_job: Option<DeleteJob>,
     message: Option<(String, Instant)>,
-    dark: bool,
+    /// Saved preferences (theme, accent, update choices).
+    settings: crate::system::settings::Settings,
+    updater: ui::update::Updater,
     /// Showing built-in fictional data; nothing on the real disk may be touched.
     demo: bool,
     /// Sidebar shows icons only.
@@ -186,11 +200,33 @@ impl PcScannerApp {
         start_view: Option<&str>,
         demo: bool,
     ) -> Self {
-        cc.egui_ctx.set_theme(egui::ThemePreference::Dark);
         ui::theme::install_fonts(&cc.egui_ctx);
+        // Demo mode ignores saved preferences so it always looks the same.
+        let settings = if demo {
+            crate::system::settings::Settings::default()
+        } else {
+            crate::system::settings::Settings::load()
+        };
+        if let Some((_, c)) = ui::theme::ACCENTS
+            .iter()
+            .find(|(n, _)| *n == settings.accent)
+        {
+            ui::theme::set_accent(*c);
+        }
         ui::theme::apply(&cc.egui_ctx);
+        cc.egui_ctx.set_theme(if settings.dark {
+            egui::ThemePreference::Dark
+        } else {
+            egui::ThemePreference::Light
+        });
         if demo {
-            return Self::new_demo(start_view);
+            return Self::new_demo(start_view, settings);
+        }
+        let mut updater = ui::update::Updater::new(false);
+        // No network request before the user has said yes once.
+        updater.ask_consent = !settings.update_choice_made;
+        if ui::update::Updater::due(&settings) {
+            updater.start_check(&cc.egui_ctx, false);
         }
         let drives = drives::list_drives();
         // Pre-select fixed drives.
@@ -217,7 +253,8 @@ impl PcScannerApp {
             confirm: None,
             delete_job: None,
             message: None,
-            dark: true,
+            settings,
+            updater,
             nav_collapsed: false,
             scan_title: String::new(),
             explorer: Default::default(),
@@ -252,7 +289,10 @@ impl PcScannerApp {
     }
 
     /// App filled with the fictional demo computer (no disk or registry access).
-    fn new_demo(start_view: Option<&str>) -> Self {
+    fn new_demo(start_view: Option<&str>, settings: crate::system::settings::Settings) -> Self {
+        let mut updater = ui::update::Updater::new(true);
+        // `--view=update` opens the (fictional) update dialog.
+        updater.demo_offer(start_view == Some("update"));
         let (drives, data, dups) = crate::demo::scan_data();
         let drive_checked = vec![true; drives.len()];
         let generation = data.generation;
@@ -274,7 +314,8 @@ impl PcScannerApp {
                 "Demo mode: fictional data. Opening and deleting files is disabled.".into(),
                 Instant::now(),
             )),
-            dark: true,
+            settings,
+            updater,
             nav_collapsed: false,
             scan_title: String::new(),
             demo: true,
@@ -324,6 +365,26 @@ impl PcScannerApp {
 
     fn notify(&mut self, msg: impl Into<String>) {
         self.message = Some((msg.into(), Instant::now()));
+    }
+
+    /// Save preferences (never in demo mode).
+    fn save_settings(&mut self) {
+        if self.demo {
+            return;
+        }
+        if let Err(e) = self.settings.save() {
+            self.notify(format!("Could not save settings: {e}"));
+        }
+    }
+
+    fn update_events(&mut self, ctx: &egui::Context, events: Vec<ui::update::Event>) {
+        for e in events {
+            match e {
+                ui::update::Event::Notify(m) => self.notify(m),
+                ui::update::Event::SaveSettings => self.save_settings(),
+                ui::update::Event::Quit => ctx.send_viewport_cmd(egui::ViewportCommand::Close),
+            }
+        }
     }
 
     fn start_scan(&mut self, ctx: &egui::Context) {
@@ -599,105 +660,9 @@ impl PcScannerApp {
         use crate::ui::theme;
         let p = theme::pal(ui);
         ui.add_space(14.0);
-        ui.horizontal_wrapped(|ui| {
+        ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 8.0;
-            // Search shortcut (Ctrl+K)
-            let search = ui
-                .add(
-                    egui::Button::new(
-                        RichText::new(format!(
-                            "{}   Search files and folders",
-                            icons::MAGNIFYING_GLASS
-                        ))
-                        .color(p.text_muted),
-                    )
-                    .right_text(RichText::new("Ctrl K").size(11.5).color(p.text_muted))
-                    .fill(p.card)
-                    .stroke(egui::Stroke::new(1.0, p.border))
-                    .corner_radius(12)
-                    .min_size(egui::vec2(300.0, 40.0)),
-                )
-                .on_hover_text("Search the scanned files (Ctrl+K)");
-            if search.clicked() {
-                self.view = View::Search;
-            }
-            if self.demo {
-                theme::pill(ui, "Demo data", p.warning, p.warning_bg)
-                    .on_hover_text("Fictional sample data. Start without --demo to scan this PC.");
-            }
-            ui.add_space(8.0);
-
-            let scanning = self.scan.is_some();
-            ui.add_enabled_ui(!scanning, |ui| {
-                for (i, d) in self.drives.iter().enumerate() {
-                    let on = self.drive_checked[i];
-                    let fg = if on { p.text } else { p.text_muted };
-                    let resp = ui
-                        .add(
-                            egui::Button::new(
-                                RichText::new(format!(
-                                    "{}  {}  {}",
-                                    icons::HARD_DRIVE,
-                                    d.mount.display(),
-                                    format::size(d.used())
-                                ))
-                                .color(fg),
-                            )
-                            .fill(if on { p.accent_bg } else { p.card })
-                            .stroke(egui::Stroke::new(1.0, if on { p.accent } else { p.border }))
-                            .corner_radius(10)
-                            .min_size(egui::vec2(0.0, 36.0)),
-                        )
-                        .on_hover_text(format!(
-                            "{}\n{} free of {}\nClick to include or skip this drive",
-                            d.display_name(),
-                            format::size(d.available),
-                            format::size(d.total)
-                        ));
-                    if resp.clicked() {
-                        self.drive_checked[i] = !on;
-                    }
-                }
-                let mut remove = None;
-                for (i, r) in self.custom_roots.iter().enumerate() {
-                    if ui
-                        .add(
-                            egui::Button::new(format!(
-                                "{}  {}  {}",
-                                icons::FOLDER,
-                                r.display(),
-                                icons::X
-                            ))
-                            .fill(p.accent_bg)
-                            .stroke(egui::Stroke::new(1.0, p.accent))
-                            .corner_radius(10)
-                            .min_size(egui::vec2(0.0, 36.0)),
-                        )
-                        .on_hover_text("Remove this folder")
-                        .clicked()
-                    {
-                        remove = Some(i);
-                    }
-                }
-                if let Some(i) = remove {
-                    self.custom_roots.remove(i);
-                }
-                if ui
-                    .add(
-                        egui::Button::new(format!("{}  Folder", icons::PLUS))
-                            .fill(p.card)
-                            .stroke(egui::Stroke::new(1.0, p.border))
-                            .corner_radius(10)
-                            .min_size(egui::vec2(0.0, 36.0)),
-                    )
-                    .on_hover_text("Scan a specific folder")
-                    .clicked()
-                    && let Some(dir) = rfd::FileDialog::new().pick_folder()
-                {
-                    self.custom_roots.push(dir);
-                }
-            });
-
+            // Right-hand buttons first, so the rest never overlaps them.
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if let Some(scan) = &self.scan {
                     if theme::tinted_button(
@@ -731,10 +696,15 @@ impl PcScannerApp {
                     )
                     .on_hover_text(tip)
                 };
-                let theme_icon = if self.dark { icons::SUN } else { icons::MOON };
+                let theme_icon = if self.settings.dark {
+                    icons::SUN
+                } else {
+                    icons::MOON
+                };
                 if icon_btn(ui, theme_icon, "Switch between light and dark theme").clicked() {
-                    self.dark = !self.dark;
-                    ui.ctx().set_theme(if self.dark {
+                    self.settings.dark = !self.settings.dark;
+                    self.save_settings();
+                    ui.ctx().set_theme(if self.settings.dark {
                         egui::ThemePreference::Dark
                     } else {
                         egui::ThemePreference::Light
@@ -747,6 +717,127 @@ impl PcScannerApp {
                     RichText::new(format!("{}  Export", icons::EXPORT)).color(p.text_dim),
                     |ui| self.export_menu(ui),
                 );
+                ui.add_space(8.0);
+                ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                    let search_w = (ui.available_width() * 0.32).clamp(150.0, 300.0);
+                    // Search shortcut (Ctrl+K)
+                    let search = ui
+                        .add(
+                            egui::Button::new(
+                                RichText::new(format!(
+                                    "{}   Search files and folders",
+                                    icons::MAGNIFYING_GLASS
+                                ))
+                                .color(p.text_muted),
+                            )
+                            .right_text(RichText::new("Ctrl K").size(11.5).color(p.text_muted))
+                            .fill(p.card)
+                            .stroke(egui::Stroke::new(1.0, p.border))
+                            .corner_radius(12)
+                            .min_size(egui::vec2(search_w, 40.0)),
+                        )
+                        .on_hover_text("Search the scanned files (Ctrl+K)");
+                    if search.clicked() {
+                        self.view = View::Search;
+                    }
+                    if let Some(r) = &self.updater.release {
+                        let resp = theme::tinted_button(
+                            ui,
+                            format!("{}  Update {}", icons::DOWNLOAD_SIMPLE, r.version),
+                            p.success,
+                            p.success_bg,
+                        )
+                        .on_hover_text("A new version of PC Scanner is available");
+                        if resp.clicked() {
+                            self.updater.dialog_open = true;
+                        }
+                    }
+                    if self.demo {
+                        theme::pill(ui, "Demo data", p.warning, p.warning_bg).on_hover_text(
+                            "Fictional sample data. Start without --demo to scan this PC.",
+                        );
+                    }
+                    ui.add_space(8.0);
+
+                    // Drive and folder chips scroll sideways when they do not fit.
+                    egui::ScrollArea::horizontal()
+                        .id_salt("drive_chips")
+                        .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
+                        .show(ui, |ui| {
+                            ui.horizontal(|ui| {
+                                let scanning = self.scan.is_some();
+                                ui.add_enabled_ui(!scanning, |ui| {
+                                    for (i, d) in self.drives.iter().enumerate() {
+                                        let on = self.drive_checked[i];
+                                        let fg = if on { p.text } else { p.text_muted };
+                                        let resp = ui
+                        .add(
+                            egui::Button::new(
+                                RichText::new(format!(
+                                    "{}  {}  {}",
+                                    icons::HARD_DRIVE,
+                                    d.mount.display(),
+                                    format::size(d.used())
+                                ))
+                                .color(fg),
+                            )
+                            .fill(if on { p.accent_bg } else { p.card })
+                            .stroke(egui::Stroke::new(1.0, if on { p.accent } else { p.border }))
+                            .corner_radius(10)
+                            .min_size(egui::vec2(0.0, 36.0)),
+                        )
+                        .on_hover_text(format!(
+                            "{}\n{} free of {}\nClick to include or skip this drive",
+                            d.display_name(),
+                            format::size(d.available),
+                            format::size(d.total)
+                        ));
+                                        if resp.clicked() {
+                                            self.drive_checked[i] = !on;
+                                        }
+                                    }
+                                    let mut remove = None;
+                                    for (i, r) in self.custom_roots.iter().enumerate() {
+                                        if ui
+                                            .add(
+                                                egui::Button::new(format!(
+                                                    "{}  {}  {}",
+                                                    icons::FOLDER,
+                                                    r.display(),
+                                                    icons::X
+                                                ))
+                                                .fill(p.accent_bg)
+                                                .stroke(egui::Stroke::new(1.0, p.accent))
+                                                .corner_radius(10)
+                                                .min_size(egui::vec2(0.0, 36.0)),
+                                            )
+                                            .on_hover_text("Remove this folder")
+                                            .clicked()
+                                        {
+                                            remove = Some(i);
+                                        }
+                                    }
+                                    if let Some(i) = remove {
+                                        self.custom_roots.remove(i);
+                                    }
+                                    if ui
+                                        .add(
+                                            egui::Button::new(format!("{}  Folder", icons::PLUS))
+                                                .fill(p.card)
+                                                .stroke(egui::Stroke::new(1.0, p.border))
+                                                .corner_radius(10)
+                                                .min_size(egui::vec2(0.0, 36.0)),
+                                        )
+                                        .on_hover_text("Scan a specific folder")
+                                        .clicked()
+                                        && let Some(dir) = rfd::FileDialog::new().pick_folder()
+                                    {
+                                        self.custom_roots.push(dir);
+                                    }
+                                });
+                            });
+                        });
+                });
             });
         });
         ui.add_space(10.0);
@@ -995,6 +1086,18 @@ impl PcScannerApp {
 
     fn central(&mut self, ui: &mut Ui) {
         let mut actions_out: Vec<UiAction> = Vec::new();
+        if self.view == View::Settings {
+            let mut events = Vec::new();
+            ui::settings::show(
+                ui,
+                &mut self.settings,
+                &mut self.updater,
+                self.demo,
+                &mut events,
+            );
+            self.update_events(ui.ctx(), events);
+            return;
+        }
         if let Some(scan) = &self.scan {
             if ui::scanning::show(ui, scan, &self.scan_title) {
                 scan.cancel();
@@ -1234,6 +1337,8 @@ fn save_dialog(name: &str, ext: &str) -> Option<PathBuf> {
 impl eframe::App for PcScannerApp {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         self.poll_background();
+        let events = self.updater.poll(&mut self.settings);
+        self.update_events(ui.ctx(), events);
 
         if ui.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::K)) {
             self.view = View::Search;
@@ -1259,5 +1364,9 @@ impl eframe::App for PcScannerApp {
             .frame(plain(p.bg, 28, 10))
             .show(ui, |ui| self.central(ui));
         self.confirm_dialog(ui);
+        let events = self.updater.dialog(ui, &mut self.settings);
+        self.update_events(ui.ctx(), events);
+        let events = self.updater.consent_dialog(ui, &mut self.settings);
+        self.update_events(ui.ctx(), events);
     }
 }

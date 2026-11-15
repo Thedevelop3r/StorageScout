@@ -1,15 +1,18 @@
 # Builds PC Scanner on a GitHub-hosted Windows runner, signs the application, the installer
-# and the uninstaller with the project's self-signed code signing certificate, and creates a
-# draft GitHub release for version tags.
+# and the uninstaller with the project's self-signed code signing certificate, and publishes a
+# GitHub release. Installed copies of PC Scanner find that release and offer to update.
 #
 # Setup (Settings > Secrets and variables > Actions > Repository secrets):
 #   SIGNING_CERT_PFX_BASE64   base64 of pcscanner-codesign.pfx (see scripts/create-signing-cert.sh)
 #   SIGNING_CERT_PASSWORD     the PFX password
 # Without these secrets, builds are unsigned.
 #
-# Release: bump `version` in Cargo.toml, commit, then push a tag such as `v0.1.0`.
-# Tag builds (or a manual run with "sign" ticked) are signed. Branch pushes and pull
-# requests produce unsigned test builds.
+# Release: bump `version` in Cargo.toml and merge to `main`. When `main` has a version that
+# has no `v<version>` tag yet, the build is signed and published as release `v<version>`
+# (the tag is created by the release). Pushing a tag such as `v0.2.0` does the same.
+# A published release needs the signing secrets: the app refuses unsigned updates.
+# Other branch pushes and pull requests produce unsigned test builds; a manual run with
+# "sign" ticked produces a signed build without publishing it.
 
 name: Release
 
@@ -42,10 +45,11 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 60
     env:
-      SIGN: ${{ (startsWith(github.ref, 'refs/tags/v') || inputs.sign) && secrets.SIGNING_CERT_PFX_BASE64 != '' }}
+      HAS_CERT: ${{ secrets.SIGNING_CERT_PFX_BASE64 != '' }}
     outputs:
       version: ${{ steps.version.outputs.version }}
-      signed: ${{ env.SIGN }}
+      signed: ${{ steps.version.outputs.sign }}
+      publish: ${{ steps.version.outputs.publish }}
     steps:
       - name: Check out
         uses: actions/checkout@v7
@@ -55,13 +59,31 @@ jobs:
       - name: Read version
         id: version
         shell: pwsh
+        env:
+          SIGN_INPUT: ${{ inputs.sign }}
         run: |
           $version = (cargo metadata --no-deps --format-version 1 | ConvertFrom-Json).packages[0].version
-          if ("${{ github.ref_type }}" -eq "tag" -and "${{ github.ref_name }}" -ne "v$version") {
-            throw "Tag ${{ github.ref_name }} does not match Cargo.toml version $version"
+          $publish = $false
+          if ("${{ github.ref_type }}" -eq "tag") {
+            if ("${{ github.ref_name }}" -ne "v$version") {
+              throw "Tag ${{ github.ref_name }} does not match Cargo.toml version $version"
+            }
+            $publish = $true
+          } elseif ("${{ github.event_name }}" -eq "push" -and "${{ github.ref }}" -eq "refs/heads/main") {
+            # Publish once per version: only when the tag does not exist yet.
+            $existing = git ls-remote --tags "https://github.com/${{ github.repository }}.git" "refs/tags/v$version"
+            if ($LASTEXITCODE -ne 0) { throw "Could not list tags" }
+            $publish = -not $existing
+          }
+          $sign = ($publish -or $env:SIGN_INPUT -eq "true") -and $env:HAS_CERT -eq "true"
+          if ($publish -and -not $sign) {
+            throw "Version $version would be published unsigned. Add the signing secrets (see SIGNING.md)."
           }
           "version=$version" >> $env:GITHUB_OUTPUT
-          Write-Host "Version $version, signing: $env:SIGN"
+          "publish=$($publish.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+          "sign=$($sign.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+          "SIGN=$($sign.ToString().ToLower())" >> $env:GITHUB_ENV
+          Write-Host "Version $version, publish: $publish, signing: $sign"
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -166,9 +188,9 @@ jobs:
           if-no-files-found: error
 
   release:
-    name: Create draft GitHub release
+    name: Publish GitHub release
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: needs.build.outputs.publish == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -179,10 +201,10 @@ jobs:
           name: pcscanner-${{ needs.build.outputs.version }}-windows-x64
           path: release
 
-      - name: Create draft release
+      - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: v${{ needs.build.outputs.version }}
           SIGNED: ${{ needs.build.outputs.signed }}
         run: |
           repo_url="https://github.com/$GITHUB_REPOSITORY/blob/main"
@@ -191,12 +213,14 @@ jobs:
           else
             note="**Unsigned build.** Windows SmartScreen may warn when you run it."
           fi
+          # Installed copies of PC Scanner pick up the newest published release.
           gh release create "$TAG" release/* \
             --repo "$GITHUB_REPOSITORY" \
-            --draft \
+            --target "$GITHUB_SHA" \
+            --latest \
             --title "PC Scanner ${TAG#v}" \
             --generate-notes \
             --notes "$note
 
-          Download \`PCScanner-Setup-${TAG#v}-x64.exe\` to install, or the portable zip to run without installing. Checksums are in \`SHA256SUMS.txt\`.
+          Download \`PCScanner-Setup-${TAG#v}-x64.exe\` to install, or the portable zip to run without installing. Checksums are in \`SHA256SUMS.txt\`. Installed copies of PC Scanner 0.2 and later offer this update themselves.
           See the [privacy policy]($repo_url/PRIVACY.md)."

@@ -7,6 +7,7 @@ mod model;
 mod scanner;
 mod system;
 mod ui;
+mod update;
 mod util;
 
 fn main() -> eframe::Result {

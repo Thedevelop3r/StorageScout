@@ -12,8 +12,10 @@ pub mod overview;
 pub mod programs;
 pub mod scanning;
 pub mod search;
+pub mod settings;
 pub mod theme;
 pub mod treemap;
+pub mod update;
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
