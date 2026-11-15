@@ -323,6 +323,10 @@ pub fn launch_installer(path: &Path) -> Result<(), String> {
             "/SUPPRESSMSGBOXES",
             "/NORESTART",
             "/CLOSEAPPLICATIONS",
+            // PC Scanner ignores Restart Manager's polite close request (tested: setup then
+            // stops with exit code 5), so let setup end any copy that is still running.
+            // This copy quits itself right after starting setup.
+            "/FORCECLOSEAPPLICATIONS",
             "/RELAUNCH=1",
         ])
         .spawn()

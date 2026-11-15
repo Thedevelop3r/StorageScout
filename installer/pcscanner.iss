@@ -4,7 +4,7 @@
 ;   iscc /DAppVersion=0.1.0 installer\pcscanner.iss
 ;
 ; Silent update (used by PC Scanner's updater):
-;   PCScanner-Setup-x.y.z-x64.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /RELAUNCH=1
+;   PCScanner-Setup-x.y.z-x64.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /FORCECLOSEAPPLICATIONS /RELAUNCH=1
 ;
 ; Optional defines:
 ;   /DAppVersion=x.y.z     version shown in the installer (default 0.0.0)
