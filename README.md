@@ -100,14 +100,10 @@ under **Inaccessible**).
 
 ## Code signing
 
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by
-[SignPath Foundation](https://signpath.org).
-
-Until SignPath signing is active, releases are signed with the project's own self-signed
-certificate, so Windows SmartScreen will warn when you start the installer: choose
-**More info → Run anyway**. The release notes say which certificate a release uses. See the
-[code signing policy](SIGNING.md) for details and how to verify a download. You can also build
-PC Scanner yourself from source.
+Releases are signed with the project's own self-signed certificate, so Windows SmartScreen will
+still warn when you start the installer: choose **More info → Run anyway**. The signature lets you
+verify that the file comes from this project; see [SIGNING.md](SIGNING.md) for the certificate
+thumbprint and how to check it. You can also build PC Scanner yourself from source.
 
 ## Privacy
 
@@ -134,18 +130,11 @@ The installer is written to `dist\`.
 
 1. Set `version` in `Cargo.toml` and commit.
 2. Push a tag `v<version>`, for example `v0.1.0`.
-3. The Release workflow tests, builds, signs the app and the installer, and creates a draft
-   GitHub release. With SignPath, approve the two signing requests in SignPath while the
-   workflow waits. Review the draft and publish it.
+3. The Release workflow tests, builds, signs the app, the installer and the uninstaller with the
+   project certificate, and creates a draft GitHub release. Review it and publish it.
 
-Signing uses SignPath when it is configured, otherwise the self-signed certificate:
-
-- **SignPath:** secret `SIGNPATH_API_TOKEN` and variables `SIGNPATH_ORGANIZATION_ID`,
-  `SIGNPATH_PROJECT_SLUG` and `SIGNPATH_SIGNING_POLICY`. The SignPath project needs artifact
-  configurations named `exe` and `installer` with the XML from
-  [`.signpath/artifact-configurations`](.signpath/artifact-configurations).
-- **Self-signed:** secrets `SIGNING_CERT_PFX_BASE64` and `SIGNING_CERT_PASSWORD`, created once with
-  `scripts/create-signing-cert.sh` (see the comments in that script).
+Signing needs the repository secrets `SIGNING_CERT_PFX_BASE64` and `SIGNING_CERT_PASSWORD`,
+created once with `scripts/create-signing-cert.sh` (see the comments in that script).
 
 ## Tests
 

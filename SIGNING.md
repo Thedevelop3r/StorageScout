@@ -1,58 +1,7 @@
-# Code signing policy
+# Code signing
 
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by
-[SignPath Foundation](https://signpath.org).
-
-## What is signed
-
-Only binaries built from the source code in this repository are signed:
-
-- `pcscanner.exe`, the application;
-- `PCScanner-Setup-<version>-x64.exe`, the Windows installer.
-
-Both are built by the [Release workflow](.github/workflows/release.yml) on GitHub-hosted runners,
-from a version tag (`v*`) in this repository, and submitted to SignPath from there. Signing is
-never done on a personal computer. Third-party libraries are compiled from source into the
-application; no separately signed third-party binaries are shipped. The SignPath artifact
-configurations are in [`.signpath/artifact-configurations`](.signpath/artifact-configurations).
-
-## Team roles
-
-| Role | Members |
-|------|---------|
-| Committers and reviewers | [Bilal Amjad](https://github.com/Thedevelop3r) |
-| Approvers | [Bilal Amjad](https://github.com/Thedevelop3r) |
-
-- **Committers** may change the source code without further review.
-- **Reviewers** review every change from contributors outside the team (pull requests) before it
-  is merged.
-- **Approvers** manually approve every signing request in SignPath before a release is signed.
-
-All team members use multi-factor authentication for GitHub and SignPath.
-
-## Privacy policy
-
-This program will not transfer any information to other networked systems unless specifically
-requested by the user or the person installing or operating it. See the full
-[privacy policy](PRIVACY.md).
-
-## Verify a SignPath-signed download
-
-```powershell
-Get-AuthenticodeSignature .\PCScanner-Setup-0.1.0-x64.exe | Format-List Status, SignerCertificate
-```
-
-`Status` is `Valid` and the signer is `SignPath Foundation`. Compare file hashes with
-`SHA256SUMS.txt` from the release.
-
----
-
-# Self-signed certificate (fallback)
-
-Until SignPath signing is active, and for builds where it is not available, releases are signed
-with the project's own **self-signed** certificate, created with OpenSSL
-([`scripts/create-signing-cert.sh`](scripts/create-signing-cert.sh)). The release notes say which
-certificate a release uses.
+PC Scanner releases are signed with the project's own **self-signed** code signing certificate,
+created with OpenSSL ([`scripts/create-signing-cert.sh`](scripts/create-signing-cert.sh)).
 
 | | |
 |---|---|
@@ -62,7 +11,7 @@ certificate a release uses.
 | SHA-256 fingerprint | `A0C0D5CCF96128F8412C62988A29799617DDFB02D9CAA063BE1EE7472E3F5541` |
 | Valid | 15 Nov 2026 to 14 Nov 2031 |
 
-## What is signed with it
+## What is signed
 
 - `pcscanner.exe`, the application;
 - `PCScanner-Setup-<version>-x64.exe`, the installer, and the uninstaller inside it.
