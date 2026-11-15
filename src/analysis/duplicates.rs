@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver};
 
 use rayon::prelude::*;
@@ -44,7 +44,12 @@ pub struct DupJob {
 
 impl DupJob {
     /// Collect candidate files from the tree and start hashing in the background.
-    pub fn start(tree: &FileTree, files_by_size: &[NodeId], min_size: u64, ctx: egui::Context) -> Self {
+    pub fn start(
+        tree: &FileTree,
+        files_by_size: &[NodeId],
+        min_size: u64,
+        ctx: egui::Context,
+    ) -> Self {
         // files_by_size is sorted desc; group equal sizes.
         let mut candidates: Vec<(NodeId, PathBuf, u64)> = Vec::new();
         let mut i = 0;
@@ -110,8 +115,7 @@ fn find_duplicates(candidates: Vec<(NodeId, PathBuf, u64)>, p: &DupProgress) -> 
         by_key.entry((size, h)).or_default().push((id, path));
     }
     type Group = ((u64, u64), Vec<(NodeId, PathBuf)>);
-    let survivors: Vec<Group> =
-        by_key.into_iter().filter(|(_, v)| v.len() >= 2).collect();
+    let survivors: Vec<Group> = by_key.into_iter().filter(|(_, v)| v.len() >= 2).collect();
 
     // Stage 2: full hash for files bigger than what the partial hash already covered.
     p.stage.store(2, Ordering::Relaxed);
@@ -128,7 +132,10 @@ fn find_duplicates(candidates: Vec<(NodeId, PathBuf, u64)>, p: &DupProgress) -> 
         .flat_map_iter(|((size, _), files)| {
             if size <= (PARTIAL * 2) as u64 {
                 // partial hash already covered the full file
-                return vec![DupGroup { size, ids: files.into_iter().map(|f| f.0).collect() }];
+                return vec![DupGroup {
+                    size,
+                    ids: files.into_iter().map(|f| f.0).collect(),
+                }];
             }
             let mut by_full: HashMap<u64, Vec<NodeId>> = HashMap::new();
             for (id, path) in files {

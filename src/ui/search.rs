@@ -17,7 +17,14 @@ pub struct SearchState {
 
 impl Default for SearchState {
     fn default() -> Self {
-        Self { query: String::new(), include_dirs: true, include_files: true, results: Vec::new(), searched: None, truncated: false }
+        Self {
+            query: String::new(),
+            include_dirs: true,
+            include_files: true,
+            results: Vec::new(),
+            searched: None,
+            truncated: false,
+        }
     }
 }
 
@@ -67,9 +74,22 @@ pub fn show(ui: &mut Ui, st: &mut SearchState, ctx: &mut Ctx) {
         st.results.retain(|&id| !tree.is_gone(id));
         let total: u64 = st.results.iter().map(|&id| tree.get(id).size).sum();
         ui.horizontal(|ui| {
-            ui.label(RichText::new(format!("{} results · {}", format::count(st.results.len() as u64), format::size(total))).strong());
+            ui.label(
+                RichText::new(format!(
+                    "{} results · {}",
+                    format::count(st.results.len() as u64),
+                    format::size(total)
+                ))
+                .strong(),
+            );
             if st.truncated {
-                ui.label(RichText::new(format!("(stopped at {} results)", format::count(MAX_RESULTS as u64))).weak());
+                ui.label(
+                    RichText::new(format!(
+                        "(stopped at {} results)",
+                        format::count(MAX_RESULTS as u64)
+                    ))
+                    .weak(),
+                );
             }
             if !st.results.is_empty() && ui.button("☑ Select all results").clicked() {
                 ctx.actions.push(UiAction::Select(st.results.clone()));
@@ -77,7 +97,16 @@ pub fn show(ui: &mut Ui, st: &mut SearchState, ctx: &mut Ctx) {
         });
         ui.separator();
         let rows = std::mem::take(&mut st.results);
-        let out = node_table(ui, "search_table", ctx, &rows, TableOptions { show_files: true, ..Default::default() });
+        let out = node_table(
+            ui,
+            "search_table",
+            ctx,
+            &rows,
+            TableOptions {
+                show_files: true,
+                ..Default::default()
+            },
+        );
         if let Some(id) = out.activated {
             if tree.get(id).is_dir {
                 ctx.actions.push(UiAction::ShowInExplorer(id));

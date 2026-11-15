@@ -75,7 +75,11 @@ pub fn age(unix_secs: i64) -> String {
         d if d < 365 => format!("{} months ago", d / 30),
         d => {
             let y = d / 365;
-            if y == 1 { "1 year ago".to_owned() } else { format!("{y} years ago") }
+            if y == 1 {
+                "1 year ago".to_owned()
+            } else {
+                format!("{y} years ago")
+            }
         }
     }
 }
@@ -96,7 +100,11 @@ pub fn duration(secs: f64) -> String {
 
 /// Percentage of `part` in `whole`, safe for zero.
 pub fn percent(part: u64, whole: u64) -> f32 {
-    if whole == 0 { 0.0 } else { (part as f64 / whole as f64 * 100.0) as f32 }
+    if whole == 0 {
+        0.0
+    } else {
+        (part as f64 / whole as f64 * 100.0) as f32
+    }
 }
 
 #[cfg(test)]

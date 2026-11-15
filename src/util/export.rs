@@ -10,10 +10,17 @@ use crate::ui::ScanData;
 
 pub fn export_files_csv(data: &ScanData, path: &Path, limit: usize) -> Result<usize, String> {
     let mut w = csv::Writer::from_path(path).map_err(|e| e.to_string())?;
-    w.write_record(["path", "size_bytes", "size", "category", "modified"]).map_err(|e| e.to_string())?;
+    w.write_record(["path", "size_bytes", "size", "category", "modified"])
+        .map_err(|e| e.to_string())?;
     let tree = &data.tree;
     let mut n = 0;
-    for &id in data.analysis.files_by_size.iter().filter(|&&id| !tree.get(id).deleted).take(limit) {
+    for &id in data
+        .analysis
+        .files_by_size
+        .iter()
+        .filter(|&&id| !tree.get(id).deleted)
+        .take(limit)
+    {
         let node = tree.get(id);
         w.write_record([
             tree.path(id).to_string_lossy().as_ref(),
@@ -31,10 +38,17 @@ pub fn export_files_csv(data: &ScanData, path: &Path, limit: usize) -> Result<us
 
 pub fn export_folders_csv(data: &ScanData, path: &Path, limit: usize) -> Result<usize, String> {
     let mut w = csv::Writer::from_path(path).map_err(|e| e.to_string())?;
-    w.write_record(["path", "size_bytes", "size", "files", "modified"]).map_err(|e| e.to_string())?;
+    w.write_record(["path", "size_bytes", "size", "files", "modified"])
+        .map_err(|e| e.to_string())?;
     let tree = &data.tree;
     let mut n = 0;
-    for &id in data.analysis.dirs_by_size.iter().filter(|&&id| !tree.get(id).deleted).take(limit) {
+    for &id in data
+        .analysis
+        .dirs_by_size
+        .iter()
+        .filter(|&&id| !tree.get(id).deleted)
+        .take(limit)
+    {
         let node = tree.get(id);
         w.write_record([
             tree.path(id).to_string_lossy().as_ref(),
@@ -52,8 +66,17 @@ pub fn export_folders_csv(data: &ScanData, path: &Path, limit: usize) -> Result<
 
 pub fn export_programs_csv(programs: &[Program], path: &Path) -> Result<usize, String> {
     let mut w = csv::Writer::from_path(path).map_err(|e| e.to_string())?;
-    w.write_record(["name", "version", "publisher", "install_date", "estimated_size_bytes", "source", "location", "uninstall"])
-        .map_err(|e| e.to_string())?;
+    w.write_record([
+        "name",
+        "version",
+        "publisher",
+        "install_date",
+        "estimated_size_bytes",
+        "source",
+        "location",
+        "uninstall",
+    ])
+    .map_err(|e| e.to_string())?;
     for p in programs {
         w.write_record([
             p.name.as_str(),
@@ -62,7 +85,10 @@ pub fn export_programs_csv(programs: &[Program], path: &Path) -> Result<usize, S
             &p.install_date_display(),
             &p.estimated_size.to_string(),
             p.source.label(),
-            &p.install_location.as_ref().map(|l| l.to_string_lossy().into_owned()).unwrap_or_default(),
+            &p.install_location
+                .as_ref()
+                .map(|l| l.to_string_lossy().into_owned())
+                .unwrap_or_default(),
             p.uninstall_string.as_deref().unwrap_or_default(),
         ])
         .map_err(|e| e.to_string())?;
@@ -123,12 +149,19 @@ pub fn export_summary_json(data: &ScanData, path: &Path) -> Result<(), String> {
         ids.iter()
             .filter(|&&id| !tree.get(id).deleted)
             .take(100)
-            .map(|&id| Item { path: tree.path(id).to_string_lossy().into_owned(), size_bytes: tree.get(id).size })
+            .map(|&id| Item {
+                path: tree.path(id).to_string_lossy().into_owned(),
+                size_bytes: tree.get(id).size,
+            })
             .collect()
     };
     let summary = Summary {
         generated: chrono::Local::now().to_rfc3339(),
-        roots: data.roots.iter().map(|r| r.to_string_lossy().into_owned()).collect(),
+        roots: data
+            .roots
+            .iter()
+            .map(|r| r.to_string_lossy().into_owned())
+            .collect(),
         total_size_bytes: a.total_size,
         total_files: a.total_files,
         total_folders: a.total_dirs,
@@ -136,15 +169,34 @@ pub fn export_summary_json(data: &ScanData, path: &Path) -> Result<(), String> {
         inaccessible: data.errors.len(),
         categories: Category::ALL
             .iter()
-            .map(|&c| CatOut { category: c, label: c.label(), size_bytes: a.categories[c.index()].size, files: a.categories[c.index()].count })
+            .map(|&c| CatOut {
+                category: c,
+                label: c.label(),
+                size_bytes: a.categories[c.index()].size,
+                files: a.categories[c.index()].count,
+            })
             .collect(),
-        top_extensions: a.extensions.iter().take(50).map(|e| ExtOut { extension: e.ext.clone(), size_bytes: e.size, files: e.count }).collect(),
+        top_extensions: a
+            .extensions
+            .iter()
+            .take(50)
+            .map(|e| ExtOut {
+                extension: e.ext.clone(),
+                size_bytes: e.size,
+                files: e.count,
+            })
+            .collect(),
         largest_files: items(&a.files_by_size),
         largest_folders: items(&a.dirs_by_size),
         cleanup: data
             .cleanup
             .iter()
-            .map(|c| CleanOut { group: c.group, title: c.title.clone(), size_bytes: c.size, locations: c.targets.len() })
+            .map(|c| CleanOut {
+                group: c.group,
+                title: c.title.clone(),
+                size_bytes: c.size,
+                locations: c.targets.len(),
+            })
             .collect(),
     };
     let json = serde_json::to_string_pretty(&summary).map_err(|e| e.to_string())?;

@@ -14,7 +14,11 @@ pub struct TreemapState {
 
 impl Default for TreemapState {
     fn default() -> Self {
-        Self { current: None, depth: 3, menu_node: None }
+        Self {
+            current: None,
+            depth: 3,
+            menu_node: None,
+        }
     }
 }
 
@@ -43,7 +47,10 @@ pub fn show(ui: &mut Ui, state: &mut TreemapState, ctx: &mut Ctx) {
                 ui.label("Pick a scanned location:");
                 for &r in &tree.roots {
                     let n = tree.get(r);
-                    if ui.button(format!("💽 {}  —  {}", n.name, format::size(n.size))).clicked() {
+                    if ui
+                        .button(format!("💽 {}  —  {}", n.name, format::size(n.size)))
+                        .clicked()
+                    {
                         state.current = Some(r);
                     }
                 }
@@ -55,7 +62,13 @@ pub fn show(ui: &mut Ui, state: &mut TreemapState, ctx: &mut Ctx) {
 
     ui.horizontal(|ui| {
         let parent = tree.get(current).parent;
-        if ui.add_enabled(parent != crate::model::tree::NO_PARENT, egui::Button::new("⬆ Up")).clicked() {
+        if ui
+            .add_enabled(
+                parent != crate::model::tree::NO_PARENT,
+                egui::Button::new("⬆ Up"),
+            )
+            .clicked()
+        {
             state.current = Some(parent);
         }
         if tree.roots.len() > 1 && ui.button("🏠").on_hover_text("All locations").clicked() {
@@ -75,7 +88,13 @@ pub fn show(ui: &mut Ui, state: &mut TreemapState, ctx: &mut Ctx) {
         ui.add(egui::Slider::new(&mut state.depth, 1..=6));
         ui.label(RichText::new(format::size(tree.get(current).size)).strong());
     });
-    ui.label(RichText::new("Click a folder to zoom in · double-click a file to open · right-click for actions").weak().small());
+    ui.label(
+        RichText::new(
+            "Click a folder to zoom in · double-click a file to open · right-click for actions",
+        )
+        .weak()
+        .small(),
+    );
 
     let size = ui.available_size();
     let (resp, painter) = ui.allocate_painter(size, Sense::click());
@@ -87,14 +106,29 @@ pub fn show(ui: &mut Ui, state: &mut TreemapState, ctx: &mut Ctx) {
     let hover_pos = resp.hover_pos();
     let mut hovered: Option<usize> = None;
     let dark = ui.visuals().dark_mode;
-    let text_color = if dark { Color32::from_gray(235) } else { Color32::from_gray(20) };
+    let text_color = if dark {
+        Color32::from_gray(235)
+    } else {
+        Color32::from_gray(20)
+    };
     for (i, c) in cells.iter().enumerate() {
         let n = tree.get(c.id);
-        let fill = if n.is_dir { dir_color(c.depth, dark) } else { shade(n.category.color(), c.depth) };
+        let fill = if n.is_dir {
+            dir_color(c.depth, dark)
+        } else {
+            shade(n.category.color(), c.depth)
+        };
         painter.rect_filled(c.rect, 2.0, fill);
-        painter.rect_stroke(c.rect, 2.0, Stroke::new(1.0, Color32::from_black_alpha(90)), StrokeKind::Inside);
+        painter.rect_stroke(
+            c.rect,
+            2.0,
+            Stroke::new(1.0, Color32::from_black_alpha(90)),
+            StrokeKind::Inside,
+        );
         let has_header = n.is_dir && c.rect.height() > HEADER * 2.0 && c.rect.width() > 40.0;
-        if (has_header || (!n.is_dir && c.rect.width() > 50.0 && c.rect.height() > 16.0)) && c.rect.width() > 30.0 {
+        if (has_header || (!n.is_dir && c.rect.width() > 50.0 && c.rect.height() > 16.0))
+            && c.rect.width() > 30.0
+        {
             let label = format!("{}  {}", n.name, format::size(n.size));
             let clip = painter.with_clip_rect(c.rect.shrink(2.0));
             clip.text(
@@ -102,7 +136,11 @@ pub fn show(ui: &mut Ui, state: &mut TreemapState, ctx: &mut Ctx) {
                 Align2::LEFT_TOP,
                 label,
                 FontId::proportional(11.0),
-                if n.is_dir { text_color } else { Color32::from_gray(15) },
+                if n.is_dir {
+                    text_color
+                } else {
+                    Color32::from_gray(15)
+                },
             );
         }
         if let Some(p) = hover_pos
@@ -114,7 +152,12 @@ pub fn show(ui: &mut Ui, state: &mut TreemapState, ctx: &mut Ctx) {
 
     if let Some(i) = hovered {
         let c = &cells[i];
-        painter.rect_stroke(c.rect, 2.0, Stroke::new(2.0, Color32::WHITE), StrokeKind::Inside);
+        painter.rect_stroke(
+            c.rect,
+            2.0,
+            Stroke::new(2.0, Color32::WHITE),
+            StrokeKind::Inside,
+        );
         let n = tree.get(c.id);
         let path = tree.path(c.id);
         let parent_size = tree.get(current).size.max(1);
@@ -123,7 +166,11 @@ pub fn show(ui: &mut Ui, state: &mut TreemapState, ctx: &mut Ctx) {
             path.display(),
             format::size(n.size),
             format::percent(n.size, parent_size),
-            if n.is_dir { format!("\n{} files", format::count(n.files as u64)) } else { String::new() },
+            if n.is_dir {
+                format!("\n{} files", format::count(n.files as u64))
+            } else {
+                String::new()
+            },
             format::age(n.modified)
         );
         let resp2 = resp.clone().on_hover_text_at_pointer(info);
@@ -145,7 +192,13 @@ pub fn show(ui: &mut Ui, state: &mut TreemapState, ctx: &mut Ctx) {
         resp.context_menu(|ui| super::node_context_menu(ui, ctx, id));
     }
     if cells.is_empty() {
-        painter.text(area.center(), Align2::CENTER_CENTER, "Empty folder", FontId::proportional(16.0), text_color);
+        painter.text(
+            area.center(),
+            Align2::CENTER_CENTER,
+            "Empty folder",
+            FontId::proportional(16.0),
+            text_color,
+        );
     }
 }
 
@@ -159,7 +212,14 @@ fn outer_dir_at(cells: &[Cell], tree: &FileTree, hovered: usize) -> Option<NodeI
     if tree.get(id).is_dir { Some(id) } else { None }
 }
 
-fn layout_children(tree: &FileTree, dir: NodeId, rect: Rect, depth: usize, max_depth: usize, out: &mut Vec<Cell>) {
+fn layout_children(
+    tree: &FileTree,
+    dir: NodeId,
+    rect: Rect,
+    depth: usize,
+    max_depth: usize,
+    out: &mut Vec<Cell>,
+) {
     if out.len() >= MAX_RECTS || rect.width() < 2.0 || rect.height() < 2.0 {
         return;
     }
@@ -188,8 +248,15 @@ fn layout_children(tree: &FileTree, dir: NodeId, rect: Rect, depth: usize, max_d
         let n = tree.get(id);
         // Respect the depth limit, but keep subdividing big areas so they never stay empty.
         let big = r.width() > 160.0 && r.height() > 120.0;
-        if n.is_dir && (depth + 1 < max_depth || big) && r.width() > 30.0 && r.height() > HEADER + 16.0 {
-            let inner = Rect::from_min_max(pos2(r.left() + 2.0, r.top() + HEADER), pos2(r.right() - 2.0, r.bottom() - 2.0));
+        if n.is_dir
+            && (depth + 1 < max_depth || big)
+            && r.width() > 30.0
+            && r.height() > HEADER + 16.0
+        {
+            let inner = Rect::from_min_max(
+                pos2(r.left() + 2.0, r.top() + HEADER),
+                pos2(r.right() - 2.0, r.bottom() - 2.0),
+            );
             layout_children(tree, id, inner, depth + 1, max_depth, out);
         }
     }
@@ -235,7 +302,13 @@ pub fn squarify(items: &[(NodeId, f64)], rect: Rect, total: f64, out: &mut Vec<(
             let mut y = y0;
             for k in i..end {
                 let hh = areas[k] / col_w;
-                out.push((items[k].0, Rect::from_min_max(pos2(x0 as f32, y as f32), pos2((x0 + col_w) as f32, (y + hh) as f32))));
+                out.push((
+                    items[k].0,
+                    Rect::from_min_max(
+                        pos2(x0 as f32, y as f32),
+                        pos2((x0 + col_w) as f32, (y + hh) as f32),
+                    ),
+                ));
                 y += hh;
             }
             x0 += col_w;
@@ -244,7 +317,13 @@ pub fn squarify(items: &[(NodeId, f64)], rect: Rect, total: f64, out: &mut Vec<(
             let mut x = x0;
             for k in i..end {
                 let ww = areas[k] / row_h;
-                out.push((items[k].0, Rect::from_min_max(pos2(x as f32, y0 as f32), pos2((x + ww) as f32, (y0 + row_h) as f32))));
+                out.push((
+                    items[k].0,
+                    Rect::from_min_max(
+                        pos2(x as f32, y0 as f32),
+                        pos2((x + ww) as f32, (y0 + row_h) as f32),
+                    ),
+                ));
                 x += ww;
             }
             y0 += row_h;
@@ -262,13 +341,21 @@ fn worst(max: f64, min: f64, sum: f64, side: f64) -> f64 {
 fn dir_color(depth: usize, dark: bool) -> Color32 {
     let base: u8 = if dark { 55 } else { 200 };
     let step = (depth as u8).saturating_mul(12);
-    let v = if dark { base.saturating_add(step) } else { base.saturating_sub(step) };
+    let v = if dark {
+        base.saturating_add(step)
+    } else {
+        base.saturating_sub(step)
+    };
     Color32::from_rgb(v.saturating_sub(5), v, v.saturating_add(14))
 }
 
 fn shade(c: Color32, depth: usize) -> Color32 {
     let f = 1.0 - (depth as f32 * 0.06).min(0.3);
-    Color32::from_rgb((c.r() as f32 * f) as u8, (c.g() as f32 * f) as u8, (c.b() as f32 * f) as u8)
+    Color32::from_rgb(
+        (c.r() as f32 * f) as u8,
+        (c.g() as f32 * f) as u8,
+        (c.b() as f32 * f) as u8,
+    )
 }
 
 #[cfg(test)]
@@ -277,7 +364,15 @@ mod tests {
 
     #[test]
     fn squarify_fills_rect() {
-        let items: Vec<(NodeId, f64)> = vec![(0, 6.0), (1, 6.0), (2, 4.0), (3, 3.0), (4, 2.0), (5, 2.0), (6, 1.0)];
+        let items: Vec<(NodeId, f64)> = vec![
+            (0, 6.0),
+            (1, 6.0),
+            (2, 4.0),
+            (3, 3.0),
+            (4, 2.0),
+            (5, 2.0),
+            (6, 1.0),
+        ];
         let rect = Rect::from_min_size(pos2(0.0, 0.0), Vec2::new(600.0, 400.0));
         let mut out = Vec::new();
         squarify(&items, rect, 24.0, &mut out);

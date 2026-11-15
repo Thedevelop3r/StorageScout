@@ -121,9 +121,7 @@ impl Category {
             | "cab" | "arj" | "z" | "tbz2" | "txz" => Category::Archive,
             "exe" | "msi" | "msix" | "appx" | "msixbundle" | "appxbundle" | "dll" | "sys"
             | "ocx" | "com" | "scr" | "so" | "dylib" | "app" | "deb" | "rpm" | "apk" | "jar"
-            | "bat" | "cmd" | "ps1" | "msp" | "efi" | "drv" | "cpl" | "pyd" => {
-                Category::Program
-            }
+            | "bat" | "cmd" | "ps1" | "msp" | "efi" | "drv" | "cpl" | "pyd" => Category::Program,
             "rs" | "c" | "h" | "cpp" | "hpp" | "cc" | "cs" | "java" | "kt" | "py" | "js"
             | "jsx" | "tsx" | "go" | "rb" | "php" | "swift" | "m" | "mm" | "lua" | "pl" | "sh"
             | "html" | "htm" | "css" | "scss" | "less" | "json" | "xml" | "yaml" | "yml"
@@ -132,9 +130,9 @@ impl Category {
             "pdb" | "obj" | "o" | "rlib" | "rmeta" | "class" | "pyc" | "pyo" | "lib" | "a"
             | "d" | "ilk" | "exp" | "idb" | "pch" | "ipch" | "tlog" | "lastbuildstate" | "iobj"
             | "ipdb" | "gch" | "dex" | "nupkg" | "whl" | "crate" => Category::Build,
-            "pak" | "vpk" | "bsa" | "ba2" | "wad" | "upk" | "uasset" | "umap" | "forge"
-            | "big" | "sav" | "esm" | "esp" | "unity3d" | "assets" | "bundle" | "pck" | "gcf"
-            | "ncf" | "vdf" | "acf" | "rpf" | "cpk" | "xnb" | "pkg" | "archive" | "ff" | "ipak"
+            "pak" | "vpk" | "bsa" | "ba2" | "wad" | "upk" | "uasset" | "umap" | "forge" | "big"
+            | "sav" | "esm" | "esp" | "unity3d" | "assets" | "bundle" | "pck" | "gcf" | "ncf"
+            | "vdf" | "acf" | "rpf" | "cpk" | "xnb" | "pkg" | "archive" | "ff" | "ipak"
             | "xpak" | "toc" | "cas" | "sb" | "rgssad" | "oodle" => Category::Game,
             "iso" | "img" | "vhd" | "vhdx" | "vmdk" | "vdi" | "qcow2" | "ova" | "ovf" | "dmg"
             | "wim" | "esd" | "swm" | "nrg" | "bin" | "cue" | "avhdx" | "vmem" | "vmsn" => {

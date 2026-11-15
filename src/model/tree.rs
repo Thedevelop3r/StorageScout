@@ -49,7 +49,9 @@ impl FileTree {
 
     /// Children of `id` that have not been deleted.
     pub fn children(&self, id: NodeId) -> impl Iterator<Item = NodeId> + '_ {
-        self.get(id).children().filter(move |&c| !self.get(c).deleted)
+        self.get(id)
+            .children()
+            .filter(move |&c| !self.get(c).deleted)
     }
 
     pub fn total_size(&self) -> u64 {
@@ -192,11 +194,19 @@ impl FileTree {
 }
 
 fn normalize(s: &str) -> String {
-    if cfg!(windows) { s.replace('/', "\\").to_lowercase() } else { s.to_owned() }
+    if cfg!(windows) {
+        s.replace('/', "\\").to_lowercase()
+    } else {
+        s.to_owned()
+    }
 }
 
 fn names_equal(a: &str, b: &str) -> bool {
-    if cfg!(windows) { a.eq_ignore_ascii_case(b) || a.to_lowercase() == b.to_lowercase() } else { a == b }
+    if cfg!(windows) {
+        a.eq_ignore_ascii_case(b) || a.to_lowercase() == b.to_lowercase()
+    } else {
+        a == b
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -319,15 +329,27 @@ pub(crate) mod tests {
         let mut sub = TempDir {
             name: "sub".into(),
             files: vec![
-                TempFile { name: "big.mkv".into(), size: 1000, modified: 1 },
-                TempFile { name: "small.txt".into(), size: 10, modified: 2 },
+                TempFile {
+                    name: "big.mkv".into(),
+                    size: 1000,
+                    modified: 1,
+                },
+                TempFile {
+                    name: "small.txt".into(),
+                    size: 10,
+                    modified: 2,
+                },
             ],
             ..Default::default()
         };
         sub.finalize();
         let mut root = TempDir {
             name: root_name.into(),
-            files: vec![TempFile { name: "a.mp3".into(), size: 500, modified: 3 }],
+            files: vec![TempFile {
+                name: "a.mp3".into(),
+                size: 500,
+                modified: 3,
+            }],
             dirs: vec![sub],
             ..Default::default()
         };

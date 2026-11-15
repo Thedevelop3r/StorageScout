@@ -37,6 +37,21 @@ safely.
 - **Export**: largest files and folders, programs (CSV), scan summary (JSON).
 - Light and dark theme.
 
+## Screenshots
+
+The screenshots show demo mode (`pcscanner --demo`), which uses made-up drives, folders, files
+and programs. No real computer was scanned.
+
+| Overview | Treemap |
+| --- | --- |
+| ![Overview](screenshots/overview.png) | ![Treemap](screenshots/treemap.png) |
+| **Explorer** | **Groups** |
+| ![Explorer](screenshots/explorer.png) | ![Groups](screenshots/groups.png) |
+| **Largest files** | **Duplicates** |
+| ![Largest files](screenshots/largestfiles.png) | ![Duplicates](screenshots/duplicates.png) |
+| **Cleanup** | **Programs** |
+| ![Cleanup](screenshots/cleanup.png) | ![Programs](screenshots/programs.png) |
+
 ## Download
 
 Get the latest installer or portable zip from the
@@ -70,6 +85,8 @@ pcscanner.exe "D:\\" "C:\Users\me\Videos" --view=treemap
 - `--view=<name>` opens a view at start: `overview`, `explorer`, `treemap`, `search`, `groups`,
   `filetypes`, `programs`, `largestfiles`, `largestfolders`, `oldfiles`, `duplicates`,
   `emptyfolders`, `cleanup`, `selection` or `inaccessible`.
+- `--demo` loads a fictional computer instead of scanning yours (used for the screenshots).
+  Opening, deleting and scanning are disabled in demo mode.
 
 Run as administrator to include folders that need elevated rights (they are otherwise listed
 under **Inaccessible**).

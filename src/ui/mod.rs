@@ -65,7 +65,11 @@ pub struct Ctx<'a> {
 pub fn node_icon(tree: &FileTree, id: NodeId) -> &'static str {
     let n = tree.get(id);
     if n.is_dir {
-        if n.parent == crate::model::tree::NO_PARENT { "💽" } else { "📁" }
+        if n.parent == crate::model::tree::NO_PARENT {
+            "💽"
+        } else {
+            "📁"
+        }
     } else {
         n.category.icon()
     }
@@ -77,7 +81,11 @@ pub fn size_bar(ui: &mut Ui, fraction: f32, color: Color32, width: f32) -> Respo
     let (rect, resp) = ui.allocate_exact_size(Vec2::new(width, height), Sense::hover());
     let painter = ui.painter();
     let rounding = height / 2.0;
-    painter.rect_filled(rect, rounding, ui.visuals().faint_bg_color.gamma_multiply(2.0));
+    painter.rect_filled(
+        rect,
+        rounding,
+        ui.visuals().faint_bg_color.gamma_multiply(2.0),
+    );
     painter.rect_filled(rect, rounding, ui.visuals().extreme_bg_color);
     let f = fraction.clamp(0.0, 1.0);
     if f > 0.0 {
@@ -90,7 +98,11 @@ pub fn size_bar(ui: &mut Ui, fraction: f32, color: Color32, width: f32) -> Respo
 
 /// Usage bar with a label on top, used for drives.
 pub fn usage_bar(ui: &mut Ui, used: u64, total: u64, width: f32) {
-    let f = if total == 0 { 0.0 } else { used as f32 / total as f32 };
+    let f = if total == 0 {
+        0.0
+    } else {
+        used as f32 / total as f32
+    };
     let color = if f > 0.9 {
         Color32::from_rgb(0xE0, 0x4F, 0x4F)
     } else if f > 0.75 {
@@ -135,11 +147,16 @@ pub fn node_context_menu(ui: &mut Ui, ctx: &mut Ctx, id: NodeId) {
         ui.close();
     }
     if ui.button("📋 Copy path").clicked() {
-        ctx.actions.push(UiAction::CopyText(path.to_string_lossy().into_owned()));
+        ctx.actions
+            .push(UiAction::CopyText(path.to_string_lossy().into_owned()));
         ui.close();
     }
     ui.separator();
-    let sel_label = if selected { "☐ Remove from selection" } else { "☑ Add to selection" };
+    let sel_label = if selected {
+        "☐ Remove from selection"
+    } else {
+        "☑ Add to selection"
+    };
     if ui.button(sel_label).clicked() {
         ctx.actions.push(UiAction::ToggleSelect(id));
         ui.close();
@@ -155,10 +172,14 @@ pub fn node_context_menu(ui: &mut Ui, ctx: &mut Ctx, id: NodeId) {
         // Right-clicking a ticked row acts on every ticked item, like a file manager.
         let label = format!("🗑 Delete {} selected items…", ctx.selection.len());
         if ui.button(RichText::new(label).color(red)).clicked() {
-            ctx.actions.push(UiAction::Delete(ctx.selection.iter().copied().collect()));
+            ctx.actions
+                .push(UiAction::Delete(ctx.selection.iter().copied().collect()));
             ui.close();
         }
-        if ui.button(RichText::new("🗑 Delete only this item…").color(red)).clicked() {
+        if ui
+            .button(RichText::new("🗑 Delete only this item…").color(red))
+            .clicked()
+        {
             ctx.actions.push(UiAction::Delete(vec![id]));
             ui.close();
         }
@@ -179,7 +200,12 @@ pub struct TableOptions {
 
 impl Default for TableOptions {
     fn default() -> Self {
-        Self { show_location: true, show_files: false, show_age: true, bar_total: 0 }
+        Self {
+            show_location: true,
+            show_files: false,
+            show_age: true,
+            bar_total: 0,
+        }
     }
 }
 
@@ -191,7 +217,13 @@ pub struct TableOutput {
 }
 
 /// Virtualised table of nodes with checkbox, name, size, date, location and a context menu.
-pub fn node_table(ui: &mut Ui, id_salt: &str, ctx: &mut Ctx, rows: &[NodeId], opts: TableOptions) -> TableOutput {
+pub fn node_table(
+    ui: &mut Ui,
+    id_salt: &str,
+    ctx: &mut Ctx,
+    rows: &[NodeId],
+    opts: TableOptions,
+) -> TableOutput {
     let mut out = TableOutput::default();
     let data = ctx.data;
     let row_h = 22.0;
@@ -264,7 +296,11 @@ pub fn node_table(ui: &mut Ui, id_salt: &str, ctx: &mut Ctx, rows: &[NodeId], op
                 });
                 row.col(|ui| {
                     let text = format!("{} {}", node_icon(tree, id), n.name);
-                    let label = if n.error { RichText::new(text).color(Color32::from_rgb(0xD0, 0x90, 0x40)) } else { RichText::new(text) };
+                    let label = if n.error {
+                        RichText::new(text).color(Color32::from_rgb(0xD0, 0x90, 0x40))
+                    } else {
+                        RichText::new(text)
+                    };
                     ui.add(egui::Label::new(label).truncate().selectable(false));
                 });
                 row.col(|ui| {
@@ -273,7 +309,11 @@ pub fn node_table(ui: &mut Ui, id_salt: &str, ctx: &mut Ctx, rows: &[NodeId], op
                 if opts.bar_total > 0 {
                     row.col(|ui| {
                         let f = n.size as f32 / opts.bar_total.max(1) as f32;
-                        let color = if n.is_dir { Color32::from_rgb(0x3D, 0x8B, 0xE0) } else { n.category.color() };
+                        let color = if n.is_dir {
+                            Color32::from_rgb(0x3D, 0x8B, 0xE0)
+                        } else {
+                            n.category.color()
+                        };
                         size_bar(ui, f, color, 60.0);
                         ui.label(RichText::new(format!("{:.1}%", f * 100.0)).small());
                     });
@@ -287,13 +327,18 @@ pub fn node_table(ui: &mut Ui, id_salt: &str, ctx: &mut Ctx, rows: &[NodeId], op
                 }
                 if opts.show_age {
                     row.col(|ui| {
-                        ui.label(format::date_short(n.modified)).on_hover_text(format::age(n.modified));
+                        ui.label(format::date_short(n.modified))
+                            .on_hover_text(format::age(n.modified));
                     });
                 }
                 row.col(|ui| {
                     if opts.show_location && n.parent != crate::model::tree::NO_PARENT {
                         let loc = tree.path(n.parent).to_string_lossy().into_owned();
-                        ui.add(egui::Label::new(RichText::new(loc).weak()).truncate().selectable(false));
+                        ui.add(
+                            egui::Label::new(RichText::new(loc).weak())
+                                .truncate()
+                                .selectable(false),
+                        );
                     }
                 });
                 let resp = row.response();
@@ -313,7 +358,9 @@ pub fn no_scan_placeholder(ui: &mut Ui) {
         ui.heading("No scan yet");
         ui.add_space(8.0);
         ui.label("Choose drives in the top bar (or add a folder) and press  ▶ Scan.");
-        ui.label(RichText::new("Tip: run as administrator to include protected system folders.").weak());
+        ui.label(
+            RichText::new("Tip: run as administrator to include protected system folders.").weak(),
+        );
     });
 }
 

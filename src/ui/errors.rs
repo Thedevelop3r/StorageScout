@@ -19,15 +19,26 @@ pub fn show(ui: &mut Ui, st: &mut ErrorsState, data: &ScanData, actions: &mut Ve
     ).weak());
     ui.horizontal(|ui| {
         ui.label("🔍");
-        ui.add(egui::TextEdit::singleline(&mut st.filter).hint_text("Filter").desired_width(220.0));
-        ui.label(format!("{} entries", format::count(data.errors.len() as u64)));
+        ui.add(
+            egui::TextEdit::singleline(&mut st.filter)
+                .hint_text("Filter")
+                .desired_width(220.0),
+        );
+        ui.label(format!(
+            "{} entries",
+            format::count(data.errors.len() as u64)
+        ));
     });
     ui.separator();
     let f = st.filter.to_lowercase();
     let rows: Vec<_> = data
         .errors
         .iter()
-        .filter(|e| f.is_empty() || e.path.to_string_lossy().to_lowercase().contains(&f) || e.message.to_lowercase().contains(&f))
+        .filter(|e| {
+            f.is_empty()
+                || e.path.to_string_lossy().to_lowercase().contains(&f)
+                || e.message.to_lowercase().contains(&f)
+        })
         .collect();
     TableBuilder::new(ui)
         .striped(true)
@@ -47,7 +58,11 @@ pub fn show(ui: &mut Ui, st: &mut ErrorsState, data: &ScanData, actions: &mut Ve
             body.rows(20.0, rows.len(), |mut row| {
                 let e = rows[row.index()];
                 row.col(|ui| {
-                    ui.add(egui::Label::new(e.path.to_string_lossy()).truncate().selectable(false));
+                    ui.add(
+                        egui::Label::new(e.path.to_string_lossy())
+                            .truncate()
+                            .selectable(false),
+                    );
                 });
                 row.col(|ui| {
                     ui.label(RichText::new(&e.message).weak());

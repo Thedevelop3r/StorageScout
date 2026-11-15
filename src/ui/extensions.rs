@@ -25,15 +25,32 @@ pub fn show(ui: &mut Ui, st: &mut ExtensionsState, ctx: &mut Ctx) {
     ui.heading("File types");
     ui.horizontal(|ui| {
         ui.label("🔍");
-        ui.add(egui::TextEdit::singleline(&mut st.search).hint_text("Extension, e.g. mp4").desired_width(160.0));
-        ui.label(RichText::new(format!("{} different extensions", format::count(a.extensions.len() as u64))).weak());
+        ui.add(
+            egui::TextEdit::singleline(&mut st.search)
+                .hint_text("Extension, e.g. mp4")
+                .desired_width(160.0),
+        );
+        ui.label(
+            RichText::new(format!(
+                "{} different extensions",
+                format::count(a.extensions.len() as u64)
+            ))
+            .weak(),
+        );
     });
 
     let search = st.search.trim_start_matches('.').to_lowercase();
-    let exts: Vec<&crate::analysis::ExtStat> =
-        a.extensions.iter().filter(|e| search.is_empty() || e.ext.contains(&search)).collect();
+    let exts: Vec<&crate::analysis::ExtStat> = a
+        .extensions
+        .iter()
+        .filter(|e| search.is_empty() || e.ext.contains(&search))
+        .collect();
 
-    let list_height = if st.selected.is_some() { ui.available_height() * 0.45 } else { ui.available_height() };
+    let list_height = if st.selected.is_some() {
+        ui.available_height() * 0.45
+    } else {
+        ui.available_height()
+    };
     ui.push_id("ext_tbl", |ui| {
         TableBuilder::new(ui)
             .striped(true)
@@ -47,7 +64,14 @@ pub fn show(ui: &mut Ui, st: &mut ExtensionsState, ctx: &mut Ctx) {
             .column(Column::initial(160.0))
             .column(Column::remainder())
             .header(20.0, |mut h| {
-                for t in ["Extension", "Group", "Total size", "Files", "Share", "Largest file"] {
+                for t in [
+                    "Extension",
+                    "Group",
+                    "Total size",
+                    "Files",
+                    "Share",
+                    "Largest file",
+                ] {
                     h.col(|ui| {
                         ui.strong(t);
                     });
@@ -58,7 +82,14 @@ pub fn show(ui: &mut Ui, st: &mut ExtensionsState, ctx: &mut Ctx) {
                     let e = exts[row.index()];
                     row.set_selected(st.selected.as_deref() == Some(e.ext.as_str()));
                     row.col(|ui| {
-                        ui.label(RichText::new(if e.ext.is_empty() { "(none)".to_owned() } else { format!(".{}", e.ext) }).strong());
+                        ui.label(
+                            RichText::new(if e.ext.is_empty() {
+                                "(none)".to_owned()
+                            } else {
+                                format!(".{}", e.ext)
+                            })
+                            .strong(),
+                        );
                     });
                     row.col(|ui| {
                         ui.label(format!("{} {}", e.category.icon(), e.category.label()));
@@ -71,15 +102,33 @@ pub fn show(ui: &mut Ui, st: &mut ExtensionsState, ctx: &mut Ctx) {
                     });
                     row.col(|ui| {
                         size_bar(ui, e.size as f32 / total as f32, e.category.color(), 90.0);
-                        ui.label(RichText::new(format!("{:.1}%", format::percent(e.size, total))).small());
+                        ui.label(
+                            RichText::new(format!("{:.1}%", format::percent(e.size, total)))
+                                .small(),
+                        );
                     });
                     row.col(|ui| {
                         if !tree.get(e.largest).deleted {
-                            ui.add(egui::Label::new(RichText::new(format!("{} ({})", tree.get(e.largest).name, format::size(tree.get(e.largest).size))).weak()).truncate().selectable(false));
+                            ui.add(
+                                egui::Label::new(
+                                    RichText::new(format!(
+                                        "{} ({})",
+                                        tree.get(e.largest).name,
+                                        format::size(tree.get(e.largest).size)
+                                    ))
+                                    .weak(),
+                                )
+                                .truncate()
+                                .selectable(false),
+                            );
                         }
                     });
                     if row.response().clicked() {
-                        st.selected = if st.selected.as_deref() == Some(e.ext.as_str()) { None } else { Some(e.ext.clone()) };
+                        st.selected = if st.selected.as_deref() == Some(e.ext.as_str()) {
+                            None
+                        } else {
+                            Some(e.ext.clone())
+                        };
                     }
                 });
             });
@@ -88,7 +137,14 @@ pub fn show(ui: &mut Ui, st: &mut ExtensionsState, ctx: &mut Ctx) {
     if let Some(ext) = st.selected.clone() {
         ui.separator();
         ui.horizontal(|ui| {
-            ui.strong(format!("Files with .{}", if ext.is_empty() { "(no extension)" } else { &ext }));
+            ui.strong(format!(
+                "Files with .{}",
+                if ext.is_empty() {
+                    "(no extension)"
+                } else {
+                    &ext
+                }
+            ));
             if ui.button("✖ Close").clicked() {
                 st.selected = None;
             }

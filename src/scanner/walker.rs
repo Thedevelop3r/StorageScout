@@ -15,7 +15,13 @@ const MAX_ERRORS: usize = 20_000;
 
 pub fn scan_root(root: &Path, progress: &Progress, errors: &Mutex<Vec<ScanError>>) -> TempDir {
     let modified = fs::metadata(root).map(|m| mtime(&m)).unwrap_or(0);
-    let mut dir = scan_dir(root, root.to_string_lossy().into(), modified, progress, errors);
+    let mut dir = scan_dir(
+        root,
+        root.to_string_lossy().into(),
+        modified,
+        progress,
+        errors,
+    );
     dir.finalize();
     dir
 }
@@ -27,7 +33,11 @@ fn scan_dir(
     progress: &Progress,
     errors: &Mutex<Vec<ScanError>>,
 ) -> TempDir {
-    let mut dir = TempDir { name, modified, ..Default::default() };
+    let mut dir = TempDir {
+        name,
+        modified,
+        ..Default::default()
+    };
     if progress.cancelled() {
         return dir;
     }
@@ -76,10 +86,16 @@ fn scan_dir(
         } else {
             let size = meta.as_ref().map(file_size).unwrap_or(0);
             bytes_here += size;
-            dir.files.push(TempFile { name, size, modified });
+            dir.files.push(TempFile {
+                name,
+                size,
+                modified,
+            });
         }
     }
-    progress.files.fetch_add(dir.files.len() as u64, Ordering::Relaxed);
+    progress
+        .files
+        .fetch_add(dir.files.len() as u64, Ordering::Relaxed);
     progress.bytes.fetch_add(bytes_here, Ordering::Relaxed);
 
     dir.dirs = subdirs
@@ -94,12 +110,20 @@ fn scan_dir(
     dir
 }
 
-fn record_error(progress: &Progress, errors: &Mutex<Vec<ScanError>>, path: &Path, e: &std::io::Error) {
+fn record_error(
+    progress: &Progress,
+    errors: &Mutex<Vec<ScanError>>,
+    path: &Path,
+    e: &std::io::Error,
+) {
     progress.errors.fetch_add(1, Ordering::Relaxed);
     if let Ok(mut errs) = errors.lock()
         && errs.len() < MAX_ERRORS
     {
-        errs.push(ScanError { path: path.to_path_buf(), message: e.to_string() });
+        errs.push(ScanError {
+            path: path.to_path_buf(),
+            message: e.to_string(),
+        });
     }
 }
 
@@ -121,7 +145,9 @@ fn file_size(m: &Metadata) -> u64 {
         const FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS: u32 = 0x0040_0000;
         // Cloud-only placeholders (OneDrive etc.) take no local space.
         if m.file_attributes()
-            & (FILE_ATTRIBUTE_OFFLINE | FILE_ATTRIBUTE_RECALL_ON_OPEN | FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS)
+            & (FILE_ATTRIBUTE_OFFLINE
+                | FILE_ATTRIBUTE_RECALL_ON_OPEN
+                | FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS)
             != 0
         {
             return 0;

@@ -2,6 +2,7 @@
 
 mod analysis;
 mod app;
+mod demo;
 mod model;
 mod scanner;
 mod system;
@@ -25,9 +26,13 @@ fn main() -> eframe::Result {
     // `--view=<name>` opens a specific view (overview, explorer, treemap, groups, ...).
     let mut paths: Vec<std::path::PathBuf> = Vec::new();
     let mut view: Option<String> = None;
+    // `--demo` shows a fictional computer instead of scanning this one.
+    let mut demo = false;
     for arg in std::env::args_os().skip(1) {
         let s = arg.to_string_lossy();
-        if let Some(v) = s.strip_prefix("--view=") {
+        if s == "--demo" {
+            demo = true;
+        } else if let Some(v) = s.strip_prefix("--view=") {
             view = Some(v.to_lowercase());
         } else {
             let p = std::path::PathBuf::from(&arg);
@@ -39,6 +44,13 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "PC Scanner",
         options,
-        Box::new(move |cc| Ok(Box::new(app::PcScannerApp::new(cc, paths, view.as_deref())))),
+        Box::new(move |cc| {
+            Ok(Box::new(app::PcScannerApp::new(
+                cc,
+                paths,
+                view.as_deref(),
+                demo,
+            )))
+        }),
     )
 }

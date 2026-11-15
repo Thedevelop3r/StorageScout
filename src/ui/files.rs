@@ -86,30 +86,58 @@ pub fn show(ui: &mut Ui, st: &mut FileListState, ctx: &mut Ctx) {
     let a = &data.analysis;
 
     let (title, help) = match st.kind {
-        ListKind::LargestFiles => ("Largest files", "Every file on the scanned drives, biggest first."),
-        ListKind::LargestFolders => ("Largest folders", "Folders by total size including everything inside."),
-        ListKind::OldFiles => ("Old files", "Files that have not been modified for a long time — good archive or cleanup candidates."),
-        ListKind::EmptyFolders => ("Empty folders", "Folders that contain no files at all (possibly empty sub-folders)."),
+        ListKind::LargestFiles => (
+            "Largest files",
+            "Every file on the scanned drives, biggest first.",
+        ),
+        ListKind::LargestFolders => (
+            "Largest folders",
+            "Folders by total size including everything inside.",
+        ),
+        ListKind::OldFiles => (
+            "Old files",
+            "Files that have not been modified for a long time — good archive or cleanup candidates.",
+        ),
+        ListKind::EmptyFolders => (
+            "Empty folders",
+            "Folders that contain no files at all (possibly empty sub-folders).",
+        ),
     };
     ui.heading(title);
     ui.label(RichText::new(help).weak());
 
     ui.horizontal_wrapped(|ui| {
         ui.label("🔍");
-        ui.add(egui::TextEdit::singleline(&mut st.search).hint_text("Name or path contains…").desired_width(200.0));
+        ui.add(
+            egui::TextEdit::singleline(&mut st.search)
+                .hint_text("Name or path contains…")
+                .desired_width(200.0),
+        );
         if matches!(st.kind, ListKind::LargestFiles | ListKind::OldFiles) {
             egui::ComboBox::from_id_salt(("cat", st.kind as u8))
-                .selected_text(st.category.map(|c| format!("{} {}", c.icon(), c.label())).unwrap_or_else(|| "All types".into()))
+                .selected_text(
+                    st.category
+                        .map(|c| format!("{} {}", c.icon(), c.label()))
+                        .unwrap_or_else(|| "All types".into()),
+                )
                 .show_ui(ui, |ui| {
                     ui.selectable_value(&mut st.category, None, "All types");
                     for c in Category::ALL {
-                        ui.selectable_value(&mut st.category, Some(c), format!("{} {}", c.icon(), c.label()));
+                        ui.selectable_value(
+                            &mut st.category,
+                            Some(c),
+                            format!("{} {}", c.icon(), c.label()),
+                        );
                     }
                 });
         }
         if st.kind != ListKind::EmptyFolders {
             ui.label("Min size (MB)");
-            ui.add(egui::DragValue::new(&mut st.min_size_mb).range(0.0..=1_000_000.0).speed(1.0));
+            ui.add(
+                egui::DragValue::new(&mut st.min_size_mb)
+                    .range(0.0..=1_000_000.0)
+                    .speed(1.0),
+            );
         }
         if st.kind == ListKind::OldFiles {
             ui.label("Not modified for");
@@ -170,7 +198,11 @@ pub fn show(ui: &mut Ui, st: &mut FileListState, ctx: &mut Ctx) {
             }
             if !search.is_empty()
                 && !n.name.to_lowercase().contains(&search)
-                && !tree.path(id).to_string_lossy().to_lowercase().contains(&search)
+                && !tree
+                    .path(id)
+                    .to_string_lossy()
+                    .to_lowercase()
+                    .contains(&search)
             {
                 continue;
             }
@@ -194,9 +226,22 @@ pub fn show(ui: &mut Ui, st: &mut FileListState, ctx: &mut Ctx) {
 
     let total: u64 = st.cache.iter().map(|&id| tree.get(id).size).sum();
     ui.horizontal(|ui| {
-        ui.label(RichText::new(format!("{} items · {}", format::count(st.cache.len() as u64), format::size(total))).strong());
+        ui.label(
+            RichText::new(format!(
+                "{} items · {}",
+                format::count(st.cache.len() as u64),
+                format::size(total)
+            ))
+            .strong(),
+        );
         if st.cache.len() >= st.limit {
-            ui.label(RichText::new(format!("(showing the first {})", format::count(st.limit as u64))).weak());
+            ui.label(
+                RichText::new(format!(
+                    "(showing the first {})",
+                    format::count(st.limit as u64)
+                ))
+                .weak(),
+            );
         }
         if !st.cache.is_empty() {
             if ui.button("☑ Select all listed").clicked() {
@@ -235,7 +280,11 @@ pub fn show(ui: &mut Ui, st: &mut FileListState, ctx: &mut Ctx) {
 fn days_label(d: u32) -> String {
     if d >= 365 && d.is_multiple_of(365) {
         let y = d / 365;
-        if y == 1 { "1 year".into() } else { format!("{y} years") }
+        if y == 1 {
+            "1 year".into()
+        } else {
+            format!("{y} years")
+        }
     } else {
         format!("{d} days")
     }

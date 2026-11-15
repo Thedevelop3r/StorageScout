@@ -11,7 +11,10 @@ fn main() {
             .set("InternalName", "pcscanner")
             .set("OriginalFilename", "pcscanner.exe")
             .set("CompanyName", "Bilal Amjad")
-            .set("LegalCopyright", "Copyright (c) 2026 Bilal Amjad. MIT License.")
+            .set(
+                "LegalCopyright",
+                "Copyright (c) 2026 Bilal Amjad. MIT License.",
+            )
             .set("ProductVersion", version)
             .set("FileVersion", version);
         if let Err(e) = res.compile() {

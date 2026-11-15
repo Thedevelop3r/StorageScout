@@ -57,7 +57,9 @@ impl ScanHandle {
     /// Start scanning the given roots on a background thread.
     pub fn start(roots: Vec<PathBuf>, expected_bytes: u64, ctx: egui::Context) -> Self {
         let progress = Arc::new(Progress::default());
-        progress.expected_bytes.store(expected_bytes, Ordering::Relaxed);
+        progress
+            .expected_bytes
+            .store(expected_bytes, Ordering::Relaxed);
         let (tx, rx) = mpsc::channel();
         let p = progress.clone();
         let r = roots;
@@ -68,7 +70,9 @@ impl ScanHandle {
                 let errors = Mutex::new(Vec::new());
                 let temp_roots: Vec<_> = {
                     use rayon::prelude::*;
-                    r.par_iter().map(|root| walker::scan_root(root, &p, &errors)).collect()
+                    r.par_iter()
+                        .map(|root| walker::scan_root(root, &p, &errors))
+                        .collect()
                 };
                 let mut tree = FileTree::default();
                 if let Ok(mut cur) = p.current.lock() {
@@ -95,7 +99,11 @@ impl ScanHandle {
                 ctx.request_repaint();
             })
             .expect("failed to spawn scanner thread");
-        Self { progress, started: Instant::now(), rx }
+        Self {
+            progress,
+            started: Instant::now(),
+            rx,
+        }
     }
 
     pub fn cancel(&self) {

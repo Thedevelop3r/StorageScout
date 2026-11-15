@@ -45,16 +45,30 @@ pub fn show(ui: &mut Ui, state: &mut ExplorerState, ctx: &mut Ctx) {
 
     // Toolbar + breadcrumbs
     ui.horizontal(|ui| {
-        if ui.add_enabled(!state.history.is_empty(), egui::Button::new("⬅")).on_hover_text("Back").clicked()
+        if ui
+            .add_enabled(!state.history.is_empty(), egui::Button::new("⬅"))
+            .on_hover_text("Back")
+            .clicked()
             && let Some(prev) = state.history.pop()
         {
             state.current = prev;
         }
-        let parent = state.current.map(|c| tree.get(c).parent).filter(|&p| p != crate::model::tree::NO_PARENT);
-        if ui.add_enabled(state.current.is_some(), egui::Button::new("⬆")).on_hover_text("Up").clicked() {
+        let parent = state
+            .current
+            .map(|c| tree.get(c).parent)
+            .filter(|&p| p != crate::model::tree::NO_PARENT);
+        if ui
+            .add_enabled(state.current.is_some(), egui::Button::new("⬆"))
+            .on_hover_text("Up")
+            .clicked()
+        {
             state.navigate(parent);
         }
-        if ui.button("🏠").on_hover_text("All scanned locations").clicked() {
+        if ui
+            .button("🏠")
+            .on_hover_text("All scanned locations")
+            .clicked()
+        {
             state.navigate(None);
         }
         ui.separator();
@@ -74,7 +88,11 @@ pub fn show(ui: &mut Ui, state: &mut ExplorerState, ctx: &mut Ctx) {
 
     ui.horizontal(|ui| {
         ui.label("🔍");
-        ui.add(egui::TextEdit::singleline(&mut state.filter).hint_text("Filter this folder").desired_width(220.0));
+        ui.add(
+            egui::TextEdit::singleline(&mut state.filter)
+                .hint_text("Filter this folder")
+                .desired_width(220.0),
+        );
         ui.label("Sort:");
         ui.selectable_value(&mut state.sort, SortBy::Size, "Size");
         ui.selectable_value(&mut state.sort, SortBy::Name, "Name");
@@ -83,7 +101,14 @@ pub fn show(ui: &mut Ui, state: &mut ExplorerState, ctx: &mut Ctx) {
         if let Some(cur) = state.current {
             ui.separator();
             let n = tree.get(cur);
-            ui.label(RichText::new(format!("{} · {} files", format::size(n.size), format::count(n.files as u64))).strong());
+            ui.label(
+                RichText::new(format!(
+                    "{} · {} files",
+                    format::size(n.size),
+                    format::count(n.files as u64)
+                ))
+                .strong(),
+            );
             if ui.button("📂 Open").clicked() {
                 ctx.actions.push(UiAction::Open(tree.path(cur)));
             }
@@ -99,7 +124,12 @@ pub fn show(ui: &mut Ui, state: &mut ExplorerState, ctx: &mut Ctx) {
 
     let mut rows: Vec<NodeId> = match state.current {
         Some(cur) => tree.children(cur).collect(),
-        None => tree.roots.iter().copied().filter(|&r| !tree.get(r).deleted).collect(),
+        None => tree
+            .roots
+            .iter()
+            .copied()
+            .filter(|&r| !tree.get(r).deleted)
+            .collect(),
     };
     if !state.filter.is_empty() {
         let f = state.filter.to_lowercase();
@@ -107,7 +137,9 @@ pub fn show(ui: &mut Ui, state: &mut ExplorerState, ctx: &mut Ctx) {
     }
     match state.sort {
         SortBy::Size => {} // already sorted by size
-        SortBy::Name => rows.sort_by_cached_key(|&id| (!tree.get(id).is_dir, tree.get(id).name.to_lowercase())),
+        SortBy::Name => {
+            rows.sort_by_cached_key(|&id| (!tree.get(id).is_dir, tree.get(id).name.to_lowercase()))
+        }
         SortBy::Modified => rows.sort_by_key(|&id| std::cmp::Reverse(tree.get(id).modified)),
         SortBy::Files => rows.sort_by_key(|&id| std::cmp::Reverse(tree.get(id).files)),
     }
@@ -124,7 +156,12 @@ pub fn show(ui: &mut Ui, state: &mut ExplorerState, ctx: &mut Ctx) {
         "explorer_table",
         ctx,
         &rows,
-        TableOptions { show_location: false, show_files: true, show_age: true, bar_total: total.max(1) },
+        TableOptions {
+            show_location: false,
+            show_files: true,
+            show_age: true,
+            bar_total: total.max(1),
+        },
     );
     if let Some(id) = out.activated {
         if tree.get(id).is_dir {

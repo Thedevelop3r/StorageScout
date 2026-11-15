@@ -87,11 +87,15 @@ impl Analysis {
                 e.largest = id;
             }
         }
-        a.files_by_size.par_sort_unstable_by_key(|&id| std::cmp::Reverse(tree.get(id).size));
-        a.dirs_by_size.par_sort_unstable_by_key(|&id| std::cmp::Reverse(tree.get(id).size));
-        a.executables.sort_unstable_by_key(|&id| std::cmp::Reverse(tree.get(id).size));
+        a.files_by_size
+            .par_sort_unstable_by_key(|&id| std::cmp::Reverse(tree.get(id).size));
+        a.dirs_by_size
+            .par_sort_unstable_by_key(|&id| std::cmp::Reverse(tree.get(id).size));
+        a.executables
+            .sort_unstable_by_key(|&id| std::cmp::Reverse(tree.get(id).size));
         a.extensions = ext_map.into_values().collect();
-        a.extensions.sort_unstable_by_key(|e| std::cmp::Reverse(e.size));
+        a.extensions
+            .sort_unstable_by_key(|e| std::cmp::Reverse(e.size));
         a
     }
 

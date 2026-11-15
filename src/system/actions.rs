@@ -27,11 +27,20 @@ pub fn reveal(path: &Path) -> Result<(), String> {
     }
     #[cfg(target_os = "macos")]
     {
-        Command::new("open").arg("-R").arg(path).spawn().map(|_| ()).map_err(|e| e.to_string())
+        Command::new("open")
+            .arg("-R")
+            .arg(path)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| e.to_string())
     }
     #[cfg(all(unix, not(target_os = "macos")))]
     {
-        let target = if path.is_dir() { path } else { path.parent().unwrap_or(path) };
+        let target = if path.is_dir() {
+            path
+        } else {
+            path.parent().unwrap_or(path)
+        };
         open::that_detached(target).map_err(|e| e.to_string())
     }
 }
@@ -83,7 +92,10 @@ pub fn protection_reason(path: &Path) -> Option<&'static str> {
     }
     #[cfg(unix)]
     {
-        let protected = ["/bin", "/sbin", "/usr", "/etc", "/lib", "/lib64", "/boot", "/home", "/System", "/Users"];
+        let protected = [
+            "/bin", "/sbin", "/usr", "/etc", "/lib", "/lib64", "/boot", "/home", "/System",
+            "/Users",
+        ];
         if protected.iter().any(|p| p.to_lowercase() == lower) {
             return Some("essential system folder");
         }
@@ -136,14 +148,23 @@ impl DeleteJob {
                 } else {
                     (delete_one(&t.path, mode), Vec::new())
                 };
-                outcomes.push(DeleteOutcome { target: t, result, kept_children: kept });
+                outcomes.push(DeleteOutcome {
+                    target: t,
+                    result,
+                    kept_children: kept,
+                });
                 d.fetch_add(1, Ordering::Relaxed);
                 ctx.request_repaint();
             }
             let _ = tx.send(outcomes);
             ctx.request_repaint();
         });
-        Self { total, done, mode, rx }
+        Self {
+            total,
+            done,
+            mode,
+            rx,
+        }
     }
 
     pub fn progress(&self) -> usize {
@@ -198,7 +219,13 @@ fn delete_contents(path: &Path, mode: DeleteMode) -> (Result<(), String>, Vec<St
         }
     }
     match last_err {
-        Some(e) if !kept.is_empty() => (Err(format!("{} item(s) could not be removed (in use?): {e}", kept.len())), kept),
+        Some(e) if !kept.is_empty() => (
+            Err(format!(
+                "{} item(s) could not be removed (in use?): {e}",
+                kept.len()
+            )),
+            kept,
+        ),
         _ => (Ok(()), kept),
     }
 }

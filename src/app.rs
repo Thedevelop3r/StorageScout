@@ -57,10 +57,19 @@ impl View {
 
     /// Parse a view name such as "treemap" or "largest-files".
     fn from_name(name: &str) -> Option<View> {
-        let n: String = name.chars().filter(|c| c.is_ascii_alphanumeric()).collect::<String>().to_lowercase();
+        let n: String = name
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric())
+            .collect::<String>()
+            .to_lowercase();
         View::ALL.into_iter().find(|v| {
             let dbg = format!("{v:?}").to_lowercase();
-            let label: String = v.label().chars().filter(|c| c.is_ascii_alphanumeric()).collect::<String>().to_lowercase();
+            let label: String = v
+                .label()
+                .chars()
+                .filter(|c| c.is_ascii_alphanumeric())
+                .collect::<String>()
+                .to_lowercase();
             dbg == n || label == n
         })
     }
@@ -87,9 +96,24 @@ impl View {
 }
 
 const NAV: [(&str, &[View]); 4] = [
-    ("", &[View::Overview, View::Explorer, View::Treemap, View::Search]),
-    ("GROUPS", &[View::Categories, View::Extensions, View::Programs]),
-    ("FIND SPACE", &[View::LargestFiles, View::LargestFolders, View::OldFiles, View::Duplicates, View::EmptyFolders]),
+    (
+        "",
+        &[View::Overview, View::Explorer, View::Treemap, View::Search],
+    ),
+    (
+        "GROUPS",
+        &[View::Categories, View::Extensions, View::Programs],
+    ),
+    (
+        "FIND SPACE",
+        &[
+            View::LargestFiles,
+            View::LargestFolders,
+            View::OldFiles,
+            View::Duplicates,
+            View::EmptyFolders,
+        ],
+    ),
     ("ACT", &[View::Cleanup, View::Selection, View::Errors]),
 ];
 
@@ -115,6 +139,8 @@ pub struct PcScannerApp {
     delete_job: Option<DeleteJob>,
     message: Option<(String, Instant)>,
     dark: bool,
+    /// Showing built-in fictional data; nothing on the real disk may be touched.
+    demo: bool,
 
     explorer: ui::explorer::ExplorerState,
     treemap: ui::treemap::TreemapState,
@@ -132,12 +158,20 @@ pub struct PcScannerApp {
 }
 
 impl PcScannerApp {
-    pub fn new(cc: &eframe::CreationContext<'_>, start_paths: Vec<PathBuf>, start_view: Option<&str>) -> Self {
+    pub fn new(
+        cc: &eframe::CreationContext<'_>,
+        start_paths: Vec<PathBuf>,
+        start_view: Option<&str>,
+        demo: bool,
+    ) -> Self {
         cc.egui_ctx.set_theme(egui::ThemePreference::Dark);
         cc.egui_ctx.global_style_mut(|s| {
             s.spacing.item_spacing = egui::vec2(8.0, 5.0);
             s.spacing.button_padding = egui::vec2(8.0, 3.0);
         });
+        if demo {
+            return Self::new_demo(start_view);
+        }
         let drives = drives::list_drives();
         // Pre-select fixed drives.
         let drive_checked = drives.iter().map(|d| !d.removable).collect();
@@ -158,6 +192,7 @@ impl PcScannerApp {
             data: None,
             programs: None,
             programs_rx: Some(rx),
+            demo: false,
             selection: BTreeSet::new(),
             confirm: None,
             delete_job: None,
@@ -194,8 +229,60 @@ impl PcScannerApp {
         app
     }
 
+    /// App filled with the fictional demo computer (no disk or registry access).
+    fn new_demo(start_view: Option<&str>) -> Self {
+        let (drives, data, dups) = crate::demo::scan_data();
+        let drive_checked = vec![true; drives.len()];
+        let generation = data.generation;
+        let c_root = data.tree.roots[0];
+        let home = data.tree.find_path(std::path::Path::new(r"C:\Users\Alex"));
+        let mut app = Self {
+            view: View::Overview,
+            drives,
+            drive_checked,
+            custom_roots: Vec::new(),
+            scan: None,
+            data: Some(data),
+            programs: Some(crate::demo::programs()),
+            programs_rx: None,
+            selection: BTreeSet::new(),
+            confirm: None,
+            delete_job: None,
+            message: Some((
+                "Demo mode: fictional data. Opening and deleting files is disabled.".into(),
+                Instant::now(),
+            )),
+            dark: true,
+            demo: true,
+            explorer: Default::default(),
+            treemap: Default::default(),
+            categories: Default::default(),
+            extensions: Default::default(),
+            largest_files: ui::files::FileListState::new(ui::files::ListKind::LargestFiles),
+            largest_folders: ui::files::FileListState::new(ui::files::ListKind::LargestFolders),
+            old_files: ui::files::FileListState::new(ui::files::ListKind::OldFiles),
+            empty_folders: ui::files::FileListState::new(ui::files::ListKind::EmptyFolders),
+            duplicates: Default::default(),
+            programs_view: Default::default(),
+            cleanup: Default::default(),
+            search: Default::default(),
+            errors: Default::default(),
+        };
+        app.duplicates.groups = Some(dups);
+        app.duplicates.generation = generation;
+        app.treemap.current = Some(c_root);
+        app.explorer.current = home;
+        if let Some(v) = start_view.and_then(View::from_name) {
+            app.view = v;
+        }
+        app
+    }
+
     /// Re-read drive sizes, keeping the user's check marks.
     fn refresh_drives(&mut self) {
+        if self.demo {
+            return;
+        }
         let new = drives::list_drives();
         let checked = new
             .iter()
@@ -216,6 +303,10 @@ impl PcScannerApp {
     }
 
     fn start_scan(&mut self, ctx: &egui::Context) {
+        if self.demo {
+            self.notify("Scanning is disabled in demo mode. Start PC Scanner without --demo to scan this PC.");
+            return;
+        }
         let mut roots: Vec<PathBuf> = Vec::new();
         let mut expected = 0;
         for (d, &c) in self.drives.iter().zip(&self.drive_checked) {
@@ -294,7 +385,11 @@ impl PcScannerApp {
             if o.target.contents_only {
                 let kids: Vec<NodeId> = data.tree.children(o.target.id).collect();
                 for k in kids {
-                    if !o.kept_children.iter().any(|n| **n == *data.tree.get(k).name) {
+                    if !o
+                        .kept_children
+                        .iter()
+                        .any(|n| **n == *data.tree.get(k).name)
+                    {
                         data.tree.mark_deleted(k);
                     }
                 }
@@ -322,7 +417,10 @@ impl PcScannerApp {
         self.refresh_drives();
         let mut msg = format!("Cleaned {ok} item(s), freed {}.", format::size(freed));
         if failed > 0 {
-            msg.push_str(&format!(" {failed} failed — {}", first_err.unwrap_or_default()));
+            msg.push_str(&format!(
+                " {failed} failed — {}",
+                first_err.unwrap_or_default()
+            ));
         }
         self.notify(msg);
     }
@@ -331,7 +429,11 @@ impl PcScannerApp {
         let Some(data) = &self.data else { return };
         let tree = &data.tree;
         // Drop items already covered by a selected ancestor.
-        let set: BTreeSet<NodeId> = ids.iter().copied().filter(|&id| !tree.is_gone(id)).collect();
+        let set: BTreeSet<NodeId> = ids
+            .iter()
+            .copied()
+            .filter(|&id| !tree.is_gone(id))
+            .collect();
         let mut targets = Vec::new();
         let mut protected = Vec::new();
         for &id in &set {
@@ -353,17 +455,41 @@ impl PcScannerApp {
                 protected.push((path, reason));
                 continue;
             }
-            targets.push(DeleteTarget { id, path, contents_only: contents, size: tree.get(id).size });
+            targets.push(DeleteTarget {
+                id,
+                path,
+                contents_only: contents,
+                size: tree.get(id).size,
+            });
         }
         let total = targets.iter().map(|t| t.size).sum();
         if targets.is_empty() && protected.is_empty() {
             return;
         }
-        self.confirm = Some(ConfirmDelete { targets, protected, mode: DeleteMode::RecycleBin, total, contents_only });
+        self.confirm = Some(ConfirmDelete {
+            targets,
+            protected,
+            mode: DeleteMode::RecycleBin,
+            total,
+            contents_only,
+        });
     }
 
     fn handle_actions(&mut self, ctx: &egui::Context, list: Vec<UiAction>) {
         for a in list {
+            // Demo paths are fictional and may collide with real ones: never touch the disk.
+            if self.demo
+                && matches!(
+                    a,
+                    UiAction::Open(_)
+                        | UiAction::Reveal(_)
+                        | UiAction::Delete(_)
+                        | UiAction::DeleteContents(_)
+                )
+            {
+                self.notify("Demo mode: opening and deleting files is disabled.");
+                continue;
+            }
             match a {
                 UiAction::Open(p) => {
                     if let Err(e) = actions::open_path(&p) {
@@ -387,7 +513,10 @@ impl PcScannerApp {
                 UiAction::Select(ids) => {
                     let n = ids.len();
                     self.selection.extend(ids);
-                    self.notify(format!("Added {} item(s) to the selection.", format::count(n as u64)));
+                    self.notify(format!(
+                        "Added {} item(s) to the selection.",
+                        format::count(n as u64)
+                    ));
                 }
                 UiAction::Unselect(ids) => {
                     for id in ids {
@@ -398,7 +527,11 @@ impl PcScannerApp {
                 UiAction::DeleteContents(ids) => self.request_delete(ids, true),
                 UiAction::ShowInExplorer(id) => {
                     if let Some(d) = &self.data {
-                        let target = if d.tree.get(id).is_dir { id } else { d.tree.get(id).parent };
+                        let target = if d.tree.get(id).is_dir {
+                            id
+                        } else {
+                            d.tree.get(id).parent
+                        };
                         self.explorer.navigate(Some(target));
                         self.view = View::Explorer;
                     }
@@ -418,24 +551,45 @@ impl PcScannerApp {
         ui.add_space(4.0);
         ui.horizontal_wrapped(|ui| {
             ui.label(RichText::new("🖥 PC Scanner").heading().strong());
+            if self.demo {
+                ui.label(
+                    RichText::new(" DEMO ")
+                        .strong()
+                        .color(Color32::BLACK)
+                        .background_color(Color32::from_rgb(0xF2, 0xB6, 0x3C)),
+                )
+                .on_hover_text("Fictional sample data. Start without --demo to scan this PC.");
+            }
             ui.separator();
             let scanning = self.scan.is_some();
             ui.add_enabled_ui(!scanning, |ui| {
                 for (i, d) in self.drives.iter().enumerate() {
                     let label = format!("💽 {}  {}", d.mount.display(), format::size(d.used()));
                     ui.checkbox(&mut self.drive_checked[i], label)
-                        .on_hover_text(format!("{}\n{} free of {}", d.display_name(), format::size(d.available), format::size(d.total)));
+                        .on_hover_text(format!(
+                            "{}\n{} free of {}",
+                            d.display_name(),
+                            format::size(d.available),
+                            format::size(d.total)
+                        ));
                 }
                 let mut remove = None;
                 for (i, r) in self.custom_roots.iter().enumerate() {
-                    if ui.button(format!("📁 {}  ✖", r.display())).on_hover_text("Remove this folder").clicked() {
+                    if ui
+                        .button(format!("📁 {}  ✖", r.display()))
+                        .on_hover_text("Remove this folder")
+                        .clicked()
+                    {
                         remove = Some(i);
                     }
                 }
                 if let Some(i) = remove {
                     self.custom_roots.remove(i);
                 }
-                if ui.button("➕ Folder…").on_hover_text("Scan a specific folder").clicked()
+                if ui
+                    .button("➕ Folder…")
+                    .on_hover_text("Scan a specific folder")
+                    .clicked()
                     && let Some(dir) = rfd::FileDialog::new().pick_folder()
                 {
                     self.custom_roots.push(dir);
@@ -446,18 +600,33 @@ impl PcScannerApp {
                 if ui.button(RichText::new("⏹ Cancel").strong()).clicked() {
                     scan.cancel();
                 }
-            } else if ui.button(RichText::new("▶ Scan").strong().size(15.0)).clicked() {
+            } else if ui
+                .button(RichText::new("▶ Scan").strong().size(15.0))
+                .clicked()
+            {
                 let ctx = ui.ctx().clone();
                 self.start_scan(&ctx);
             }
 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 let theme_icon = if self.dark { "☀" } else { "🌙" };
-                if ui.button(theme_icon).on_hover_text("Toggle light / dark theme").clicked() {
+                if ui
+                    .button(theme_icon)
+                    .on_hover_text("Toggle light / dark theme")
+                    .clicked()
+                {
                     self.dark = !self.dark;
-                    ui.ctx().set_theme(if self.dark { egui::ThemePreference::Dark } else { egui::ThemePreference::Light });
+                    ui.ctx().set_theme(if self.dark {
+                        egui::ThemePreference::Dark
+                    } else {
+                        egui::ThemePreference::Light
+                    });
                 }
-                if ui.button("🔄").on_hover_text("Refresh drive list").clicked() {
+                if ui
+                    .button("🔄")
+                    .on_hover_text("Refresh drive list")
+                    .clicked()
+                {
                     self.refresh_drives();
                 }
                 ui.menu_button("💾 Export", |ui| self.export_menu(ui));
@@ -472,20 +641,20 @@ impl PcScannerApp {
             let dirs = p.dirs.load(Ordering::Relaxed);
             let errors = p.errors.load(Ordering::Relaxed);
             let elapsed = scan.started.elapsed().as_secs_f64();
-            let frac = if expected > 0 { (bytes as f32 / expected as f32).min(0.99) } else { 0.0 };
-            ui.add(
-                egui::ProgressBar::new(frac)
-                    .animate(true)
-                    .text(format!(
-                        "{}  ·  {} files  ·  {} folders  ·  {} inaccessible  ·  {}  ·  {:.0} files/s",
-                        format::size(bytes),
-                        format::count(files),
-                        format::count(dirs),
-                        format::count(errors),
-                        format::duration(elapsed),
-                        files as f64 / elapsed.max(0.1)
-                    )),
-            );
+            let frac = if expected > 0 {
+                (bytes as f32 / expected as f32).min(0.99)
+            } else {
+                0.0
+            };
+            ui.add(egui::ProgressBar::new(frac).animate(true).text(format!(
+                "{}  ·  {} files  ·  {} folders  ·  {} inaccessible  ·  {}  ·  {:.0} files/s",
+                format::size(bytes),
+                format::count(files),
+                format::count(dirs),
+                format::count(errors),
+                format::duration(elapsed),
+                files as f64 / elapsed.max(0.1)
+            )));
             let current = p.current.lock().map(|c| c.clone()).unwrap_or_default();
             ui.add(egui::Label::new(RichText::new(current).weak().small()).truncate());
             ui.ctx().request_repaint_after(Duration::from_millis(100));
@@ -496,27 +665,55 @@ impl PcScannerApp {
     fn export_menu(&mut self, ui: &mut Ui) {
         let has_data = self.data.is_some();
         let mut result: Option<Result<String, String>> = None;
-        if ui.add_enabled(has_data, egui::Button::new("Largest files (CSV)…")).clicked() {
+        if ui
+            .add_enabled(has_data, egui::Button::new("Largest files (CSV)…"))
+            .clicked()
+        {
             if let (Some(d), Some(p)) = (&self.data, save_dialog("largest_files.csv", "csv")) {
-                result = Some(export::export_files_csv(d, &p, 100_000).map(|n| format!("Exported {n} files to {}", p.display())));
+                result = Some(
+                    export::export_files_csv(d, &p, 100_000)
+                        .map(|n| format!("Exported {n} files to {}", p.display())),
+                );
             }
             ui.close();
         }
-        if ui.add_enabled(has_data, egui::Button::new("Largest folders (CSV)…")).clicked() {
+        if ui
+            .add_enabled(has_data, egui::Button::new("Largest folders (CSV)…"))
+            .clicked()
+        {
             if let (Some(d), Some(p)) = (&self.data, save_dialog("largest_folders.csv", "csv")) {
-                result = Some(export::export_folders_csv(d, &p, 100_000).map(|n| format!("Exported {n} folders to {}", p.display())));
+                result = Some(
+                    export::export_folders_csv(d, &p, 100_000)
+                        .map(|n| format!("Exported {n} folders to {}", p.display())),
+                );
             }
             ui.close();
         }
-        if ui.add_enabled(self.programs.is_some(), egui::Button::new("Installed programs (CSV)…")).clicked() {
+        if ui
+            .add_enabled(
+                self.programs.is_some(),
+                egui::Button::new("Installed programs (CSV)…"),
+            )
+            .clicked()
+        {
             if let (Some(progs), Some(p)) = (&self.programs, save_dialog("programs.csv", "csv")) {
-                result = Some(export::export_programs_csv(progs, &p).map(|n| format!("Exported {n} programs to {}", p.display())));
+                result = Some(
+                    export::export_programs_csv(progs, &p)
+                        .map(|n| format!("Exported {n} programs to {}", p.display())),
+                );
             }
             ui.close();
         }
-        if ui.add_enabled(has_data, egui::Button::new("Scan summary (JSON)…")).clicked() {
-            if let (Some(d), Some(p)) = (&self.data, save_dialog("pcscanner_summary.json", "json")) {
-                result = Some(export::export_summary_json(d, &p).map(|_| format!("Saved summary to {}", p.display())));
+        if ui
+            .add_enabled(has_data, egui::Button::new("Scan summary (JSON)…"))
+            .clicked()
+        {
+            if let (Some(d), Some(p)) = (&self.data, save_dialog("pcscanner_summary.json", "json"))
+            {
+                result = Some(
+                    export::export_summary_json(d, &p)
+                        .map(|_| format!("Saved summary to {}", p.display())),
+                );
             }
             ui.close();
         }
@@ -537,16 +734,26 @@ impl PcScannerApp {
             }
             for &v in views {
                 let badge = match (v, data) {
-                    (View::Cleanup, Some(d)) => Some(format::size(d.cleanup.iter().map(|c| c.size).sum())),
-                    (View::Selection, _) if !self.selection.is_empty() => Some(format::count(self.selection.len() as u64)),
-                    (View::Errors, Some(d)) if !d.errors.is_empty() => Some(format::count(d.errors.len() as u64)),
+                    (View::Cleanup, Some(d)) => {
+                        Some(format::size(d.cleanup.iter().map(|c| c.size).sum()))
+                    }
+                    (View::Selection, _) if !self.selection.is_empty() => {
+                        Some(format::count(self.selection.len() as u64))
+                    }
+                    (View::Errors, Some(d)) if !d.errors.is_empty() => {
+                        Some(format::count(d.errors.len() as u64))
+                    }
                     (View::Programs, _) => self.programs.as_ref().map(|p| p.len().to_string()),
                     _ => None,
                 };
                 let selected = self.view == v;
                 let resp = ui.add_sized(
                     [ui.available_width(), 26.0],
-                    egui::Button::selectable(selected, v.label()).right_text(badge.map(|b| RichText::new(b).small().weak()).unwrap_or_default()),
+                    egui::Button::selectable(selected, v.label()).right_text(
+                        badge
+                            .map(|b| RichText::new(b).small().weak())
+                            .unwrap_or_default(),
+                    ),
                 );
                 if resp.clicked() {
                     self.view = v;
@@ -587,11 +794,27 @@ impl PcScannerApp {
                     })
                     .map(|&id| tree.get(id).size)
                     .sum();
-                ui.label(RichText::new(format!("☑ {} selected · {}", format::count(self.selection.len() as u64), format::size(size))).strong());
+                ui.label(
+                    RichText::new(format!(
+                        "☑ {} selected · {}",
+                        format::count(self.selection.len() as u64),
+                        format::size(size)
+                    ))
+                    .strong(),
+                );
                 if ui.button("Show").clicked() {
                     self.view = View::Selection;
                 }
-                if ui.add_enabled(self.delete_job.is_none(), egui::Button::new(RichText::new("🗑 Delete selected…").color(Color32::from_rgb(0xE0, 0x60, 0x60)))).clicked() {
+                if ui
+                    .add_enabled(
+                        self.delete_job.is_none(),
+                        egui::Button::new(
+                            RichText::new("🗑 Delete selected…")
+                                .color(Color32::from_rgb(0xE0, 0x60, 0x60)),
+                        ),
+                    )
+                    .clicked()
+                {
                     actions_out.push(UiAction::Delete(self.selection.iter().copied().collect()));
                 }
                 if ui.button("Clear").clicked() {
@@ -634,7 +857,11 @@ impl PcScannerApp {
                 let mut ctx_holder;
                 let ctx = match &self.data {
                     Some(d) => {
-                        ctx_holder = Ctx { data: d, selection: &self.selection, actions: &mut actions_out };
+                        ctx_holder = Ctx {
+                            data: d,
+                            selection: &self.selection,
+                            actions: &mut actions_out,
+                        };
                         Some(&mut ctx_holder)
                     }
                     None => None,
@@ -642,7 +869,13 @@ impl PcScannerApp {
                 ui::overview::show(ui, &self.drives, self.data.as_ref(), ctx);
             }
             View::Programs => {
-                ui::programs::show(ui, &mut self.programs_view, self.programs.as_deref(), self.data.as_ref(), &mut actions_out);
+                ui::programs::show(
+                    ui,
+                    &mut self.programs_view,
+                    self.programs.as_deref(),
+                    self.data.as_ref(),
+                    &mut actions_out,
+                );
             }
             View::Errors => {
                 if let Some(d) = &self.data {
@@ -651,14 +884,20 @@ impl PcScannerApp {
             }
             v => {
                 let Some(d) = &self.data else { return };
-                let mut ctx = Ctx { data: d, selection: &self.selection, actions: &mut actions_out };
+                let mut ctx = Ctx {
+                    data: d,
+                    selection: &self.selection,
+                    actions: &mut actions_out,
+                };
                 match v {
                     View::Explorer => ui::explorer::show(ui, &mut self.explorer, &mut ctx),
                     View::Treemap => ui::treemap::show(ui, &mut self.treemap, &mut ctx),
                     View::Categories => ui::categories::show(ui, &mut self.categories, &mut ctx),
                     View::Extensions => ui::extensions::show(ui, &mut self.extensions, &mut ctx),
                     View::LargestFiles => ui::files::show(ui, &mut self.largest_files, &mut ctx),
-                    View::LargestFolders => ui::files::show(ui, &mut self.largest_folders, &mut ctx),
+                    View::LargestFolders => {
+                        ui::files::show(ui, &mut self.largest_folders, &mut ctx)
+                    }
                     View::OldFiles => ui::files::show(ui, &mut self.old_files, &mut ctx),
                     View::EmptyFolders => ui::files::show(ui, &mut self.empty_folders, &mut ctx),
                     View::Duplicates => ui::duplicates::show(ui, &mut self.duplicates, &mut ctx),
@@ -678,39 +917,86 @@ impl PcScannerApp {
         let mut decision: Option<bool> = None;
         egui::Modal::new(egui::Id::unique("confirm_delete")).show(ui.ctx(), |ui| {
             ui.set_width(520.0);
-            let title = if c.contents_only { "Empty folder contents?" } else { "Delete items?" };
+            let title = if c.contents_only {
+                "Empty folder contents?"
+            } else {
+                "Delete items?"
+            };
             ui.heading(title);
             ui.add_space(4.0);
             if !c.targets.is_empty() {
-                ui.label(RichText::new(format!("{} item(s) · {}", c.targets.len(), format::size(c.total))).strong().size(15.0));
-                egui::ScrollArea::vertical().max_height(180.0).show(ui, |ui| {
-                    for t in c.targets.iter().take(200) {
-                        let prefix = if t.contents_only { "✨ contents of " } else { "" };
-                        ui.label(RichText::new(format!("{prefix}{}  ({})", t.path.display(), format::size(t.size))).small());
-                    }
-                    if c.targets.len() > 200 {
-                        ui.label(RichText::new(format!("…and {} more", c.targets.len() - 200)).weak());
-                    }
-                });
+                ui.label(
+                    RichText::new(format!(
+                        "{} item(s) · {}",
+                        c.targets.len(),
+                        format::size(c.total)
+                    ))
+                    .strong()
+                    .size(15.0),
+                );
+                egui::ScrollArea::vertical()
+                    .max_height(180.0)
+                    .show(ui, |ui| {
+                        for t in c.targets.iter().take(200) {
+                            let prefix = if t.contents_only {
+                                "✨ contents of "
+                            } else {
+                                ""
+                            };
+                            ui.label(
+                                RichText::new(format!(
+                                    "{prefix}{}  ({})",
+                                    t.path.display(),
+                                    format::size(t.size)
+                                ))
+                                .small(),
+                            );
+                        }
+                        if c.targets.len() > 200 {
+                            ui.label(
+                                RichText::new(format!("…and {} more", c.targets.len() - 200))
+                                    .weak(),
+                            );
+                        }
+                    });
             }
             if !c.protected.is_empty() {
                 ui.add_space(6.0);
-                ui.label(RichText::new(format!("🛡 {} protected item(s) will be skipped:", c.protected.len())).color(Color32::from_rgb(0xE0, 0xA0, 0x3C)));
+                ui.label(
+                    RichText::new(format!(
+                        "🛡 {} protected item(s) will be skipped:",
+                        c.protected.len()
+                    ))
+                    .color(Color32::from_rgb(0xE0, 0xA0, 0x3C)),
+                );
                 for (p, reason) in c.protected.iter().take(5) {
-                    ui.label(RichText::new(format!("{} — {reason}", p.display())).small().weak());
+                    ui.label(
+                        RichText::new(format!("{} — {reason}", p.display()))
+                            .small()
+                            .weak(),
+                    );
                 }
             }
             ui.add_space(8.0);
             if !c.targets.is_empty() {
-                ui.radio_value(&mut c.mode, DeleteMode::RecycleBin, "♻ Move to Recycle Bin (can be restored)");
-                ui.radio_value(&mut c.mode, DeleteMode::Permanent, "⚠ Delete permanently (cannot be undone)");
+                ui.radio_value(
+                    &mut c.mode,
+                    DeleteMode::RecycleBin,
+                    "♻ Move to Recycle Bin (can be restored)",
+                );
+                ui.radio_value(
+                    &mut c.mode,
+                    DeleteMode::Permanent,
+                    "⚠ Delete permanently (cannot be undone)",
+                );
             }
             ui.add_space(8.0);
             ui.horizontal(|ui| {
                 if !c.targets.is_empty() {
                     let label = match c.mode {
                         DeleteMode::RecycleBin => RichText::new("Move to Recycle Bin"),
-                        DeleteMode::Permanent => RichText::new("Delete permanently").color(Color32::from_rgb(0xFF, 0x70, 0x70)),
+                        DeleteMode::Permanent => RichText::new("Delete permanently")
+                            .color(Color32::from_rgb(0xFF, 0x70, 0x70)),
                     };
                     if ui.button(label.strong()).clicked() {
                         decision = Some(true);
@@ -737,9 +1023,19 @@ impl PcScannerApp {
 
 fn selection_view(ui: &mut Ui, ctx: &mut Ctx) {
     ui.heading("Selection");
-    ui.label(RichText::new("Items you ticked in any view. Delete them together from the bar at the bottom.").weak());
+    ui.label(
+        RichText::new(
+            "Items you ticked in any view. Delete them together from the bar at the bottom.",
+        )
+        .weak(),
+    );
     let tree = &ctx.data.tree;
-    let mut rows: Vec<NodeId> = ctx.selection.iter().copied().filter(|&id| !tree.is_gone(id)).collect();
+    let mut rows: Vec<NodeId> = ctx
+        .selection
+        .iter()
+        .copied()
+        .filter(|&id| !tree.is_gone(id))
+        .collect();
     rows.sort_by_key(|&id| std::cmp::Reverse(tree.get(id).size));
     if rows.is_empty() {
         ui.add_space(20.0);
@@ -747,19 +1043,36 @@ fn selection_view(ui: &mut Ui, ctx: &mut Ctx) {
         return;
     }
     ui.separator();
-    let out = ui::node_table(ui, "selection_table", ctx, &rows, TableOptions { show_files: true, ..Default::default() });
+    let out = ui::node_table(
+        ui,
+        "selection_table",
+        ctx,
+        &rows,
+        TableOptions {
+            show_files: true,
+            ..Default::default()
+        },
+    );
     if let Some(id) = out.activated {
         ctx.actions.push(UiAction::ShowInExplorer(id));
     }
 }
 
 fn same_path(a: &std::path::Path, b: &std::path::Path) -> bool {
-    let norm = |p: &std::path::Path| p.to_string_lossy().replace('/', "\\").trim_end_matches('\\').to_lowercase();
+    let norm = |p: &std::path::Path| {
+        p.to_string_lossy()
+            .replace('/', "\\")
+            .trim_end_matches('\\')
+            .to_lowercase()
+    };
     norm(a) == norm(b)
 }
 
 fn save_dialog(name: &str, ext: &str) -> Option<PathBuf> {
-    rfd::FileDialog::new().set_file_name(name).add_filter(ext.to_uppercase(), &[ext]).save_file()
+    rfd::FileDialog::new()
+        .set_file_name(name)
+        .add_filter(ext.to_uppercase(), &[ext])
+        .save_file()
 }
 
 impl eframe::App for PcScannerApp {
@@ -768,7 +1081,10 @@ impl eframe::App for PcScannerApp {
 
         egui::Panel::top("top_bar").show(ui, |ui| self.top_bar(ui));
         egui::Panel::bottom("bottom_bar").show(ui, |ui| self.bottom_bar(ui));
-        egui::Panel::left("nav").resizable(false).exact_size(190.0).show(ui, |ui| self.nav_panel(ui));
+        egui::Panel::left("nav")
+            .resizable(false)
+            .exact_size(190.0)
+            .show(ui, |ui| self.nav_panel(ui));
         egui::CentralPanel::default().show(ui, |ui| self.central(ui));
         self.confirm_dialog(ui);
     }

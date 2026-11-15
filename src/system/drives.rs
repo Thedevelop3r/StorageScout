@@ -22,7 +22,11 @@ impl DriveInfo {
 
     pub fn display_name(&self) -> String {
         let mount = self.mount.to_string_lossy();
-        if self.label.is_empty() { mount.into_owned() } else { format!("{} ({})", self.label, mount) }
+        if self.label.is_empty() {
+            mount.into_owned()
+        } else {
+            format!("{} ({})", self.label, mount)
+        }
     }
 }
 
@@ -52,7 +56,10 @@ pub fn list_drives() -> Vec<DriveInfo> {
     #[cfg(unix)]
     out.retain(|d| {
         let fs = d.file_system.to_lowercase();
-        !matches!(fs.as_str(), "tmpfs" | "devtmpfs" | "overlay" | "squashfs" | "proc" | "sysfs")
+        !matches!(
+            fs.as_str(),
+            "tmpfs" | "devtmpfs" | "overlay" | "squashfs" | "proc" | "sysfs"
+        )
     });
     out.sort_by(|a, b| a.mount.cmp(&b.mount));
     out.dedup_by(|a, b| a.mount == b.mount);
