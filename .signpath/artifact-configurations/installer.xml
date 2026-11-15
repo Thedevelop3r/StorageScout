@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SignPath artifact configuration "installer".
+  Signs the Inno Setup installer (a PE executable) uploaded as a zipped GitHub artifact.
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="PCScanner-Setup-*-x64.exe" product-name="PC Scanner" product-version="${version}">
+      <authenticode-sign/>
+    </pe-file>
+  </zip-file>
+  <parameters>
+    <parameter name="version" required="true"/>
+  </parameters>
+</artifact-configuration>

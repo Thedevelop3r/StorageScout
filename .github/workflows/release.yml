@@ -1,0 +1,215 @@
+# Builds PC Scanner on a GitHub-hosted Windows runner, signs the application and the
+# installer through SignPath (free OSS code signing by the SignPath Foundation), and
+# publishes a draft GitHub release for version tags.
+#
+# Setup (repository settings):
+#   Secret    SIGNPATH_API_TOKEN          API token of a SignPath user with submitter rights
+#   Variable  SIGNPATH_ORGANIZATION_ID    SignPath organization id
+#   Variable  SIGNPATH_PROJECT_SLUG       e.g. pcscanner
+#   Variable  SIGNPATH_SIGNING_POLICY     e.g. release-signing
+# Artifact configurations "exe" and "installer" must exist in the SignPath project
+# (see .signpath/artifact-configurations). Without the secret, unsigned builds are produced.
+#
+# Release: bump `version` in Cargo.toml, commit, then push a tag such as `v0.1.0`.
+# Only tag builds (or a manual run with "sign" ticked) are sent to SignPath.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+    # Branch pushes and pull requests produce unsigned test builds.
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sign:
+        description: "Submit the build to SignPath for signing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build, sign and package (Windows x64)
+    runs-on: windows-latest
+    timeout-minutes: 300
+    permissions:
+      contents: read
+      actions: read
+    env:
+      SIGN: ${{ (startsWith(github.ref, 'refs/tags/v') || inputs.sign) && secrets.SIGNPATH_API_TOKEN != '' }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      signed: ${{ env.SIGN }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Read version
+        id: version
+        shell: pwsh
+        run: |
+          $version = (cargo metadata --no-deps --format-version 1 | ConvertFrom-Json).packages[0].version
+          if ("${{ github.ref_type }}" -eq "tag" -and "${{ github.ref_name }}" -ne "v$version") {
+            throw "Tag ${{ github.ref_name }} does not match Cargo.toml version $version"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Version $version, signing: $env:SIGN"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Test
+        run: cargo test --release --locked
+
+      - name: Build
+        run: cargo build --release --locked
+
+      - name: Stage application
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force staging/exe | Out-Null
+          Copy-Item target/release/pcscanner.exe staging/exe/
+
+      - name: Upload unsigned application
+        id: upload-exe
+        uses: actions/upload-artifact@v7
+        with:
+          name: pcscanner-exe-unsigned
+          path: staging/exe/pcscanner.exe
+          if-no-files-found: error
+
+      - name: Sign application
+        if: env.SIGN == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY }}
+          artifact-configuration-slug: exe
+          github-artifact-id: ${{ steps.upload-exe.outputs.artifact-id }}
+          wait-for-completion: true
+          # Each release is approved manually in SignPath; allow time for that.
+          wait-for-completion-timeout-in-seconds: 7200
+          output-artifact-directory: signed/exe
+          parameters: |
+            version: ${{ toJSON(steps.version.outputs.version) }}
+
+      - name: Select application binary
+        shell: pwsh
+        run: |
+          $exe = if ($env:SIGN -eq 'true') { "signed/exe/pcscanner.exe" } else { "staging/exe/pcscanner.exe" }
+          if (-not (Test-Path $exe)) { throw "$exe not found" }
+          "APP_EXE=$((Resolve-Path $exe).Path)" >> $env:GITHUB_ENV
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue) -and -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup --no-progress -y
+          }
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = (Get-Command iscc -ErrorAction SilentlyContinue).Source
+          if (-not $iscc) { $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
+          $out = Join-Path $PWD "staging/installer"
+          & $iscc "/DAppVersion=${{ steps.version.outputs.version }}" "/DSourceExe=$env:APP_EXE" "/DOutputDir=$out" installer/pcscanner.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
+
+      - name: Upload unsigned installer
+        id: upload-installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: pcscanner-installer-unsigned
+          path: staging/installer/PCScanner-Setup-${{ steps.version.outputs.version }}-x64.exe
+          if-no-files-found: error
+
+      - name: Sign installer
+        if: env.SIGN == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY }}
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.upload-installer.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 7200
+          output-artifact-directory: signed/installer
+          parameters: |
+            version: ${{ toJSON(steps.version.outputs.version) }}
+
+      - name: Assemble release files
+        shell: pwsh
+        run: |
+          $v = "${{ steps.version.outputs.version }}"
+          $installer = if ($env:SIGN -eq 'true') { "signed/installer" } else { "staging/installer" }
+          New-Item -ItemType Directory -Force release, portable | Out-Null
+          Copy-Item "$installer/PCScanner-Setup-$v-x64.exe" release/
+          Copy-Item $env:APP_EXE portable/
+          Copy-Item LICENSE portable/LICENSE.txt
+          Copy-Item README.md, PRIVACY.md portable/
+          Compress-Archive -Path portable/* -DestinationPath "release/PCScanner-$v-x64-portable.zip"
+          Get-ChildItem release -File | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
+          } | Set-Content -Encoding ascii release/SHA256SUMS.txt
+          Get-ChildItem release
+
+      - name: Upload release files
+        uses: actions/upload-artifact@v7
+        with:
+          name: pcscanner-${{ steps.version.outputs.version }}-windows-x64
+          path: release/*
+          if-no-files-found: error
+
+  release:
+    name: Create draft GitHub release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download release files
+        uses: actions/download-artifact@v8
+        with:
+          name: pcscanner-${{ needs.build.outputs.version }}-windows-x64
+          path: release
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          SIGNED: ${{ needs.build.outputs.signed }}
+        run: |
+          if [ "$SIGNED" = "true" ]; then
+            note="Signed with a certificate from the SignPath Foundation. Free code signing provided by SignPath.io, certificate by SignPath Foundation."
+          else
+            note="**Unsigned build.** Windows SmartScreen may warn when you run it."
+          fi
+          gh release create "$TAG" release/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft \
+            --title "PC Scanner ${TAG#v}" \
+            --generate-notes \
+            --notes "$note
+
+          Download \`PCScanner-Setup-${TAG#v}-x64.exe\` to install, or the portable zip to run without installing.
+          See the [code signing policy](https://github.com/$GITHUB_REPOSITORY/blob/main/CODE_SIGNING_POLICY.md) and [privacy policy](https://github.com/$GITHUB_REPOSITORY/blob/main/PRIVACY.md)."

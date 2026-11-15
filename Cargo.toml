@@ -2,6 +2,14 @@
 name = "pcscanner"
 version = "0.1.0"
 edition = "2024"
+authors = ["Bilal Amjad"]
+description = "Scan every drive, file and program on your PC, see what uses space, and clean up safely."
+license = "MIT"
+repository = "https://github.com/Thedevelop3r/pcscanner"
+homepage = "https://github.com/Thedevelop3r/pcscanner"
+readme = "README.md"
+keywords = ["disk-usage", "disk-analyzer", "cleanup", "egui", "windows"]
+categories = ["filesystem", "gui"]
 
 [dependencies]
 chrono = "0.4.45"
@@ -27,3 +35,6 @@ opt-level = 3
 lto = "thin"
 codegen-units = 1
 strip = true
+
+[build-dependencies]
+winresource = "0.1.34"

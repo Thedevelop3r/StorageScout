@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SignPath artifact configuration "exe".
+  The workflow uploads pcscanner.exe as a zipped GitHub artifact; this signs the exe inside it.
+  Product name and version are enforced as required by the SignPath Foundation.
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="pcscanner.exe" product-name="PC Scanner" product-version="${version}">
+      <authenticode-sign/>
+    </pe-file>
+  </zip-file>
+  <parameters>
+    <parameter name="version" required="true"/>
+  </parameters>
+</artifact-configuration>

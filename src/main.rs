@@ -13,7 +13,12 @@ fn main() -> eframe::Result {
         viewport: egui::ViewportBuilder::default()
             .with_title("PC Scanner")
             .with_inner_size([1360.0, 860.0])
-            .with_min_inner_size([900.0, 560.0]),
+            .with_min_inner_size([900.0, 560.0])
+            .with_icon(egui::IconData {
+                rgba: include_bytes!("../assets/icon_64.rgba").to_vec(),
+                width: 64,
+                height: 64,
+            }),
         ..Default::default()
     };
     // Optional: folders/drives passed on the command line are scanned right away.
