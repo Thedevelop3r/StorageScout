@@ -5,6 +5,8 @@ A fast desktop disk analyser for Windows (also builds on Linux and macOS), writt
 using space, grouped and sorted, so you can inspect anything, jump to its location and clean up
 safely.
 
+<a href="https://apps.microsoft.com/detail/9PNL0JSSWLGJ"><img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft" width="200"></a>
+
 ## Features
 
 - **Drives**: capacity, free space and file system of every volume.
@@ -52,7 +54,11 @@ was scanned.
 
 ## Download
 
-Get the latest installer or portable zip from the
+**Microsoft Store (recommended):** [StorageScout on the Microsoft Store](https://apps.microsoft.com/detail/9PNL0JSSWLGJ).
+The Store version is signed by Microsoft, installs without SmartScreen warnings and is updated
+by the Store.
+
+**GitHub:** get the latest installer or portable zip from the
 [Releases page](https://github.com/Thedevelop3r/StorageScout/releases).
 
 - `StorageScout-Setup-<version>-x64.exe` installs StorageScout for you or for all users, with a Start

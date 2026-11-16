@@ -51,7 +51,7 @@ allow it:
   that is covered by the
   [GitHub Privacy Statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement).
   In demo mode (`--demo`) StorageScout makes no network requests at all.
-- The Microsoft Store version never checks for updates itself and makes no network requests;
+- The [Microsoft Store version](https://apps.microsoft.com/detail/9PNL0JSSWLGJ) never checks for updates itself and makes no network requests;
   the Microsoft Store keeps it up to date.
 
 ## Third-party components and services
